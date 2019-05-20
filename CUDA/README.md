@@ -1,10 +1,10 @@
 # CUDA
 
-> I use Visual Studio 2015 and CUDA Toolkit 9.1
+> I use Visual Studio 2015 and CUDA Toolkit 9.1. Visual Studio 2015 does not support C++ by default. You have to go to File\New\Project\Visual C++ and click on "Install Visual C++ 2015 Tools for Windows Desktop". 
 
 CUDA program has:
-- Host code (main function) (run on CPU)
-- Device code (run on GPU)
+- Host code (main function) (runs on CPU)
+- Device code (runs on GPU)
 
 `__global__` keyword means that function is going to be running on CUDA enabled device.
 
