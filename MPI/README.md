@@ -30,13 +30,13 @@ int main()
 
 Gets the address of a location in memory 
 
-```
+```c
 int MPI_Address(const void *input_location, MPI_Aint *output_address)
 ```
 > This is depricated function. To be able to use it, add `_CRT_SECURE_NO_WARNINGS` and `MSMPI_NO_DEPRECATE_20` to preprocessor definitions [in this way](https://stackoverflow.com/questions/16883037/remove-secure-warnings-crt-secure-no-warnings-from-projects-by-default-in-vis)
 ### MPI_Send
 
-```
+```c
 int MPI_Send(const void *buf, //initial address of send buffer (choice) 
              int count, 
              MPI_Datatype datatype, 
@@ -46,7 +46,8 @@ int MPI_Send(const void *buf, //initial address of send buffer (choice)
 ```
 
 ### MPI_Recv
-```
+
+```c
 int MPI_Recv(void *buf, 
             int count, 
             MPI_Datatype datatype, 
@@ -62,7 +63,7 @@ Broadcasts a message from the process with rank "root" to all other processes of
 
 [How to use](https://stackoverflow.com/questions/7864075/using-mpi-bcast-for-mpi-communication)
 
-```
+```c
 int MPI_Bcast(void *buffer,
               int count, 
               MPI_Datatype datatype, 
@@ -70,9 +71,57 @@ int MPI_Bcast(void *buffer,
               MPI_Comm comm)
 ```
 
+### MPI_Scatter
+
+[Tutorial](https://mpitutorial.com/tutorials/mpi-scatter-gather-and-allgather/)
+
+![Difference](https://mpitutorial.com/tutorials/mpi-scatter-gather-and-allgather/broadcastvsscatter.png)
+
+```c
+int MPI_Scatter(const void *sendbuf, 
+                int sendcount, 
+                MPI_Datatype sendtype,
+                void *recvbuf, 
+                int recvcount, 
+                MPI_Datatype recvtype, 
+                int root,
+                MPI_Comm comm)
+```
+
+- `sendbuf` address of send buffer (choice, significant only at root) 
+- `sendcount` number of elements sent to each process (integer, significant only at root) 
+- `sendtype` data type of send buffer elements (significant only at root) (handle) 
+- `recvcount` number of elements in receive buffer (integer) 
+- `recvtype` data type of receive buffer elements
+- `root` rank of sending process (integer)
+
+
+### MPI_Gather
+
+![Tutorial](https://mpitutorial.com/tutorials/mpi-scatter-gather-and-allgather/gather.png)
+
+```c
+int MPI_Gather(const void *sendbuf,
+              int sendcount,
+              MPI_Datatype sendtype,
+              void *recvbuf,
+              int recvcount,
+              MPI_Datatype recvtype,
+              int root, 
+              MPI_Comm comm)
+```
+
+- `sendbuf` starting address of send buffer (choice) 
+- `sendcount` number of elements in send buffer (integer) 
+- `sendtype` data type of send buffer elements (handle) 
+- `recvcount` number of elements for any single receive (integer, significant only at root) 
+- `recvtype` data type of recv buffer elements (significant only at root) (handle) 
+- `root` rank of receiving process (integer) 
+- `comm` communicator (handle) 
+
 ### MPI_type_struct
 
-```
+```c
 int MPI_Type_struct(int count,
                    const int *array_of_blocklengths,
                    const MPI_Aint *array_of_displacements,
@@ -89,7 +138,7 @@ int MPI_Type_struct(int count,
 
 Example:
 
-```
+```c
 struct{char a, int b, double c} val;
 
 MPI_Address(&val.a, &baseadr);  // array_of_types[0] is MPI_CHAR
@@ -101,12 +150,12 @@ array_of_displacements[1]=adr_b-baseadr
 array_of_displacements[2]=adr_c-baseadr
 ```
 
-### MPI_Typevector
+### MPI_Type_vector
 
 Omogucava da formiramo izveden tip podatka gde su blokovi koji čine izveden tip iste veličine. Poceči blokova se nalaze na *jednakim rastojanjima*.
 
-```
-int MPI_Typevector(
+```c
+int MPI_Type_vector(
   int count, 
   int block_len,
   int stride, //predstavlja razmak izmedju pocetaka blokova izrazen u elementima starog tipa (stari tip je sledeci argument funkcije),
@@ -141,7 +190,7 @@ count = n, blocklen=1, stride=n, MPI_Int;
 
 ### MPI_Type_indexed
 
-```
+```c
 MPI_Type_indexed(
   int count, 
   int *array_of_blocklens,
@@ -226,11 +275,36 @@ void main(int argc, char *argv[]){
 }
 ```
 
+Modification:
+
+```
+Matrix in process 0
+0       1       2       3
+4       5       6       7
+8       9       10      11
+12      13      14      15
+Matrix in process 1
+0       4       0       0
+0       5       0       0
+0       6       0       0
+0       7       0       0
+Press any key to continue . . .
+...
+MPI_Type_vector(n, 1, n, MPI_INT, &kolona);
+MPI_Type_commit(&kolona);
+
+MPI_Type_vector(n, 1, 1, MPI_INT, &red);
+MPI_Type_commit(&red);
+...
+MPI_Send(&A[1][0], 1, red, 1, 0, MPI_COMM_WORLD);
+MPI_Recv(&A[0][1], 1, kolona, 0, 0, MPI_COMM_WORLD, &st);
+```
+
 ## 2. zadatak
 
 > Napisati MPI program kojim se elementi gornje trougaone matrice procesa 0 salju i primaju u donju trougaonu matricu procesa 1.
 
-```
+```c
 Process 0:
 0       1       2       3
 4       5       6       7
@@ -245,7 +319,7 @@ Process 1:
 
 Gornji trougao:
 
-```
+```c
 array_of_blocklens[0]=n     // n-1
 array_of_blocklens[1]=n-1
 array_of_blocklens[2]=n-2
@@ -259,7 +333,7 @@ array_of_displacements[3]=15
 
 Donji trougao:
 
-```
+```c
 array_of_blocklens[0]=1     // i+1
 array_of_blocklens[1]=2
 array_of_blocklens[2]=3
@@ -271,7 +345,7 @@ array_of_displacements[2]=8
 array_of_displacements[3]=12
 ```
 
-```
+```c
 void main(int argc, char *argv[]){
   int A[n][n], rank, i, j;
   int array_of_blocklens[n], array_of_displacements[n];
@@ -316,8 +390,6 @@ void main(int argc, char *argv[]){
   MPI_Finalize();
 }
 ```
- 
-Slanje prvog izvedenog tipa: čim se posalje zadnji bajt, odmah ide slanje sledećeg.
 
 ## 3. Zadatak
 
@@ -328,7 +400,7 @@ Slanje prvog izvedenog tipa: čim se posalje zadnji bajt, odmah ide slanje slede
 |-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|
 |A|A|A|A|_|_|_|_|B|B|B|B|B|B|B|B|
 
-```
+```c
 using namespace std; 
 void main(int argc, char *argv[]) {
   int rank;
@@ -337,6 +409,7 @@ void main(int argc, char *argv[]) {
   int blocklens[2];
   MPI_Aint dsp[2];
   MPI_Aint base_adr, adr1;
+  
   MPI_Init(&argc, &argv);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
@@ -347,10 +420,11 @@ void main(int argc, char *argv[]) {
 
   MPI_Address(&val.a, &base_adr);
   MPI_Address(&val.b, &adr1);
-  dsp[1] = adr1 - base_adr;
   dsp[0] = 0;
+  dsp[1] = adr1 - base_adr;
+  
   // count, *array_of_blocklengths, *array_of_displacements, *array_of_types, *newtype
-  MPI_Type_struct(2, blocklens, dsp, oldtypes, &struktura);
+  MPI_Type_struct(2, blocklens, dsp, oldtypes, &struktura); // 2 because of int and double
   MPI_Type_commit(&struktura);
 
   if (rank == 0) {
@@ -364,4 +438,261 @@ void main(int argc, char *argv[]) {
   MPI_Finalize();
 }
 
+```
+
+Modification:
+
+```c
+using namespace std; 
+void main(int argc, char *argv[]) {
+  struct {
+    int a = -1;
+    double b = -1;
+    float c[2] = { -1.5, -1.5 };  // array
+  } val;
+  const int DIFFERENT_DATATYPES = 3;
+
+  int rank;
+  MPI_Datatype nova_struktura, old_types[DIFFERENT_DATATYPES];
+  MPI_Aint dsp[DIFFERENT_DATATYPES];
+  int block_lens[DIFFERENT_DATATYPES];
+  ...
+  block_lens[0] = 1;
+  block_lens[1] = 1;
+  block_lens[2] = 2;  // 2 because of the array
+
+  old_types[0] = MPI_INT;
+  old_types[1] = MPI_DOUBLE;
+  old_types[2] = MPI_FLOAT;
+
+  MPI_Address(&val.a, &base_adr);
+  MPI_Address(&val.b, &adr_b);
+  MPI_Address(&val.c, &adr_c0);
+  dsp[0] = 0;
+  dsp[1] = adr_b - base_adr;
+  dsp[2] = adr_c0 - base_adr;
+
+  MPI_Type_struct(DIFFERENT_DATATYPES, block_lens, dsp, old_types, &nova_struktura);
+  MPI_Type_commit(&nova_struktura);
+  ...
+```
+
+---
+
+## Lab 1___________ ___________ ___________ ???
+
+### 1
+
+> Napisati MPI program koji pronalazi minimalnu vrednost u delu matrice reda n (n-parno) koga čine kolone matrice sa parnim indeksom (j=0,2,4,...). Matrica je inicijalizovana u master procesu (P0). Svaki proces treba da dobije elemente kolona sa parnim indeksom iz odgovarajućih n/p vrsta (p-broj procesa, n deljivo sa p) i nađe lokalni minimum. Na taj način, P0 dobija elemente kolona sa parnim indeksom iz prvih n/p vrsta i nalazi lokalni minimum, P1 dobija elemente kolona sa parnim indeksom iz sledećih n/p vrsta i nalazi lokalni minimum itd. Nakon toga, u master procesu se izračunava i na ekranu prikazuje globalni minimum u traženom delu matrice. Zadatak realizovati korišćenjem isključivo grupnih operacija i izvedenih tipova podataka.
+
+---
+
+## MPI 2. nedelja
+
+*Slanje prvog izvedenog tipa: čim se pošalje zadnji bajt, odmah ide slanje sledećeg (počevši od jedan bajt posle kraja posledneg izvedenog tipa).*
+
+Primer izvedenog tipa podatka:
+
+```c
+MPI_Type_vector(3,2,4,MPI_INT,&izvtip);
+```
+
+|1||||||||||||
+|-|-|-|-|-|-|-|-|-|-|-|-|
+|x|x|_|_|x|x|_|_|x|x|_|_|
+
+Bez praznih mesta (bajtova):
+
+|1||||||||||2||||||||||3||||||||||
+|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|
+|x|x|_|_|x|x|_|_|x|x|x|x|_|_|x|x|_|_|x|x|x|x|_|_|x|x|_|_|x|x|_|_|x|x|
+
+Ako hocemo sa praznim:
+
+|1||||||||||||2||||||||||||3||||||||||||
+|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|
+|x|x|_|_|x|x|_|_|x|x|_|_|x|x|_|_|x|x|_|_|x|x|_|_|x|x|_|_|x|x|_|_|x|x|_|_|
+
+```c
+MPI_Type_create_resized(MPI_Datatype it, 
+  MPI_AInt lb,
+  MPI_AInt extent, 
+  MPI_Datatype *newtype
+  )
+```
+
+- `lb` Nova donja granica tipa koja odgovara najmanjem displacement-u podatka u starom tipu. Obično je 0.
+- `extent` (rastojanje) New extent of datatype (address integer). Utiče na to odakle će krenuti slanje svake sledeće jedinice novog tipa. Izrazen u bajtovima. Jednaka najmanjem displacement-u u tipu.
+- `newtype` Output. Novi izvedeni Tip
+
+`lb + extend = gornja granica`
+
+```c
+MPI_Type_vector(...);
+MPI_Type_create_resized(izvtip, 0, 12 * sizeof(int));
+MPI_Send(buff, 10 , izvtip, 1, 0, MPI_COMM_WORLD);
+```
+
+### Send a column to each process.
+
+|   |   |   |   |
+|---|---|---|---|
+|**a00**|a01|a02|a03|
+|**a10**|a11|a12|a13|
+|**a20**|a21|a22|a23|
+|**a30**|a31|a32|a33|
+
+```c
+MPI_Type_vector(n,1,n,MPI_INT,&kolona);
+MPI_Type_create_resized(kolona, 0, sizeof(int), &nkolona)
+MPI_Scatter(&a[0][0], 1, kolona, ...);
+```
+
+### Send to each process n/p columns
+
+`n=6, p=3`
+
+|p0|p0|p1|p1|p2|p2|
+|---|---|---|---|---|---|
+|x|x|x|x|x|x|
+|x|x|x|x|x|x|
+|x|x|x|x|x|x|
+|x|x|x|x|x|x|
+|x|x|x|x|x|x|
+|x|x|x|x|x|x|
+
+```c
+MPI_Type_vector(n, n/p, n, MPI_INT, &kolone)
+MPI_Type_create_resized(kolone, 0, (n/p)*sizeof(int), &nkolona);
+MPI_Scatter(&A[0][0], 1, nkolona...);
+```
+
+## Zadatak 1
+
+> Napisati MPI program koji realizuje množenje matrice *A*, n*n, i vektora *Bn*, čime se dobija rezultujući vektor *Cn*. Matrica *A* i vektor *Bn* se inicijalizuju u master procesu. Matrica *A* je podeljena u blokove po vrstama i to tako da proces *Pi* dobija vrste sa indeksima *L*, gde je `L mod p=i (0<=i<=p-1)` tj. vrste sa indeksima `i, i+p, i+2p,..., i+n-p`. Master proces distribuira blokove matrice *A* i ceo vektor *B* svim procesima. Slanje svakog bloka matrice *A* se obavlja odjednom. Svaki proces učestvuje u izračunavanju rezultata koji se prikazuje u master procesu.
+
+```
+A:
+0       1       2       3       4       5
+6       7       8       9       10      11
+12      13      14      15      16      17
+18      19      20      21      22      23
+24      25      26      27      28      29
+30      31      32      33      34      35
+
+B:
+0 2 4 6 8 10
+
+local_C: 110 290 470 650 830 1010
+```
+
+![multiplication](img/multiplication.png)
+
+*broj procesa p=3, n=6:*
+
+*P=0 dobija L=0 i L=3 vrstu* `0 mod 3 = 0; 3 mod 3 = 0` tj. `0, 0+3`
+
+*P=1 dobija L=1 i L=4 vrstu* `1 mod 3 = 1; 4 mod 3 = 1` tj. `1, 1+3`
+
+*P=2 dobija L=2 i L=5 vrstu* `2 mod 3 = 2; 5 mod 3 = 2` tj. `2, 2+3`
+
+
+*An\*n*
+
+|i|P|||||||
+|---|---|---|---|---|---|---|---|
+|0|**P0**|x|x|x|x|x|x|
+|1|P1|x|x|x|x|x|x|
+|2|*P2*|x|x|x|x|x|x|
+|3|**P0**|x|x|x|x|x|x|
+|4|P1|x|x|x|x|x|x|
+|5|*P2*|x|x|x|x|x|x|
+
+`*`
+
+|vektor *Bn*|
+|---|
+|x|
+|x|
+|x|
+|x|
+|x|
+
+`=`
+
+|vektor *Cn*|
+|---|
+|x|
+|x|
+|x|
+|x|
+|x|
+
+```c
+MPI_Type_vector(n/p, n, p*n, MPI_INT, &vrste)  // 1 new datatype has two whole rows
+MPI_Type_create_resize(&vrste, 0, n*sizeof(int), &nvrste)
+```
+
+```c
+void main(int argc, char * argv[]) {
+  int A[n][n], B[n], C[n], rank, i, j;
+  MPI_Datatype rows, successive_rows, new_type, fixed_new_type;
+  MPI_Init(&argc, &argv);
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  //MPI_Comm_size(MPI_COMM_WORLD, &p);
+  int * local_A = (int*)malloc((n / p) * n * sizeof(int));
+  int * local_C = (int*)malloc((n / p) * sizeof(int));
+
+  MPI_Type_vector(n / p, n, p*n, MPI_INT, &rows);
+  MPI_Type_create_resized(rows, 0, n * sizeof(int), &successive_rows);
+  MPI_Type_commit(&successive_rows);
+
+  if (rank == 0) {
+    printf("A:\n");
+    fill_array(&A[0][0], n*n, "i", rank);
+    print_matrix(&A[0][0], n, n);
+
+    printf("\nB:\n");
+    fill_array(&B[0], n, "2*i");
+    print_array(&B[0], n);
+    printf("\n");
+  }
+
+  // MPI_Scatter(send_buffer, send_count, send_type, recv_buffer, recv_count, recv_type, rank, comm ) 
+  MPI_Scatter(&A[0][0], 1, successive_rows, local_A, (n / p) * n, MPI_INT, 0, MPI_COMM_WORLD);
+  // MPI_Bcast(buffer, count, datatype, rank, comm)
+  MPI_Bcast(B, n, MPI_INT, 0, MPI_COMM_WORLD);
+
+  for (int i = 0; i < n / p; i++) { // 0 and 1, for n=6 and p=3
+    local_C[i] = 0;
+    for (int j = 0; j < n; j++) { // 0..5
+      local_C[i] += local_A[i*n + j] * B[j];
+      // if (rank == 0) { printf("rank=%d i=%d %d*%d\n", rank, i, local_A[i*n + j], B[j]);}
+      /*      p0  p1  p2        p0  p1  p2
+      local_c[0]  x   x   x  local_c[1]  x   x   x
+      */
+    }
+  }
+  
+  // printf(">> rank=%d:\n\tlocal_A[0]=%d local_A[1]=%d\n\tlocal_A[n]=%d local_A[n+1]=%d\n\tlocal_C[0]=%d local_C[1]=%d\n", rank, local_A[0], local_A[1], local_A[n], local_A[n+1], local_C[0], local_C[1]);
+
+  // Error! This way it would be 110 650 290 830 470 1010
+  // MPI_Gather(send_buffer, send_count, send_type, recv_buffer, recv_count, recv_type, rank, comm)
+  // MPI_Gather(local_C, n / p, MPI_INT, C, 2, MPI_INT, 0, MPI_COMM_WORLD); [12:30]
+
+  // MPI_Type_vector(count, blocklength, stride, oldtype, newtype)
+  MPI_Type_vector(n/p, 1, p, MPI_INT, &new_type); // [14:50]  [1][ ][ ][1]
+  // MPI_Type_create_resized(oldtype, lb, extent, newtype)  
+  MPI_Type_create_resized(new_type, 0, sizeof(int), &fixed_new_type);  // [15:50] [1][2][3][1][2][3]
+  MPI_Type_commit(&fixed_new_type);
+
+  // MPI_Gather(send_buffer, send_count, send_type, recv_buffer, recv_count, recv_type, rank, comm)
+  MPI_Gather(local_C, n/p, MPI_INT, C, 1, fixed_new_type, 0, MPI_COMM_WORLD);
+  
+  if (rank == 0) {
+    printf("local_C: ");
+    print_array(&C[0], n);
+  }
+  MPI_Finalize();
+}
 ```
