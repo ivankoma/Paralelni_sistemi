@@ -636,7 +636,7 @@ MPI_Type_create_resize(&vrste, 0, n*sizeof(int), &nvrste)
 ```c
 void main(int argc, char * argv[]) {
   int A[n][n], B[n], C[n], rank, i, j;
-  MPI_Datatype rows, successive_rows, new_type, fixed_new_type;
+  MPI_Datatype rows, separated_rows, new_type, fixed_new_type;
   MPI_Init(&argc, &argv);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   //MPI_Comm_size(MPI_COMM_WORLD, &p);
@@ -644,8 +644,8 @@ void main(int argc, char * argv[]) {
   int * local_C = (int*)malloc((n / p) * sizeof(int));
 
   MPI_Type_vector(n / p, n, p*n, MPI_INT, &rows);
-  MPI_Type_create_resized(rows, 0, n * sizeof(int), &successive_rows);
-  MPI_Type_commit(&successive_rows);
+  MPI_Type_create_resized(rows, 0, n * sizeof(int), &separated_rows);
+  MPI_Type_commit(&separated_rows);
 
   if (rank == 0) {
     printf("A:\n");
@@ -659,7 +659,7 @@ void main(int argc, char * argv[]) {
   }
 
   // MPI_Scatter(send_buffer, send_count, send_type, recv_buffer, recv_count, recv_type, rank, comm ) 
-  MPI_Scatter(&A[0][0], 1, successive_rows, local_A, (n / p) * n, MPI_INT, 0, MPI_COMM_WORLD);
+  MPI_Scatter(&A[0][0], 1, separated_rows, local_A, (n / p) * n, MPI_INT, 0, MPI_COMM_WORLD);
   // MPI_Bcast(buffer, count, datatype, rank, comm)
   MPI_Bcast(B, n, MPI_INT, 0, MPI_COMM_WORLD);
 
@@ -692,6 +692,126 @@ void main(int argc, char * argv[]) {
   if (rank == 0) {
     printf("local_C: ");
     print_array(&C[0], n);
+  }
+  MPI_Finalize();
+}
+```
+
+## Zadatak 2
+
+> Napisati MPI program koji realizuje množenje matrica *An\*n* i *Bn\*n* čime se dobija rezultujuca matrica *Cn\*n*. Množenje se obavlja tako sto master proces inicijalizuje matrice *A* i *B* i šalje svakom procesu po jednu kolonu matrice *A* i jednu vrstu *B*. Svi procesi učestvuju u izračunavanju a rezultat se nalazi i prikazuje u procesu sa rankom 0.
+
+```
+A:
+1       2       3
+4       5       6
+7       8       9
+
+B:
+1       3       5
+7       9       11
+13      15      17
+
+C:
+54      66      78
+117     147     177
+180     228     276
+
+vvvvvvvvvvvvvvvv
+rank=0
+        [1]
+        [4]
+        [7]
+
+*       [1 3 5]
+
+=       [1 3 5]
+        [4 12 20]
+        [7 21 35]
+^^^^^^^^^^^^^^^^
+vvvvvvvvvvvvvvvv
+rank=1
+        [2]
+        [5]
+        [8]
+
+*       [7 9 11]
+
+=       [14 18 22]
+        [35 45 55]
+        [56 72 88]
+^^^^^^^^^^^^^^^^
+vvvvvvvvvvvvvvvv
+rank=2
+        [3]
+        [6]
+        [9]
+
+*       [13 15 17]
+
+=       [39  45   d51]
+        [78  90  102]
+        [117 135 153]
+^^^^^^^^^^^^^^^^
+```
+|||
+|-|-|
+|p0|p1|
+|**a00**|a01|
+|**a10**|a11|
+
+`*`
+
+||||
+|-|-|-|
+|p0|**b00**|**b01**|
+|p1|b10|b11|
+
+`=`
+
+|||
+|-|-|
+|c00|c01|
+|c10|c11|
+
+```
+a00*b00 + a01*b10   a00*b01 + a01*b11
+a10*b00 + a11*b10   a10*b01 + a11*b11
+```
+
+```
+void main(int argc, char * argv[]) {
+  int A[n][n], B[n][n], C[n][n], tmp[n][n], one_row[n], one_col[n];
+  int rank, i, j;
+  MPI_Datatype col, succesive_col;
+  MPI_Init(&argc, &argv);
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+  if (rank == 0) {
+    fill_array(&A[0][0], n*n, "i", 0, 1);
+    fill_array(&B[0][0], n*n, "2*i", 0, 1);
+    printf("A:\n");
+    print_matrix(&A[0][0], n, n);
+    printf("\nB:\n");
+    print_matrix(&B[0][0], n, n);
+  }
+
+  MPI_Type_vector(n, 1, n, MPI_INT, &col);
+  MPI_Type_create_resized(col, 0, sizeof(int), &succesive_col);
+  MPI_Type_commit(&succesive_col);
+  MPI_Scatter(&A[0][0], 1, succesive_col, one_col, n, MPI_INT, 0, MPI_COMM_WORLD);
+  MPI_Scatter(&B[0][0], n, MPI_INT, one_row, n, MPI_INT, 0, MPI_COMM_WORLD);
+
+  for (i = 0; i<n; i++) {
+    for (j = 0; j<n; j++) {
+      tmp[i][j] = one_col[i] * one_row[j];
+    }
+  }
+  // MPI_Reduce (send_buffer, recv_buffer, count, datatype, operation, rank, comm)
+  MPI_Reduce(&tmp[0][0], &C[0][0], n*n, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+  if (rank == 0) {
+    printf("\nC:\n");
+    print_matrix(&C[0][0], n, n);
   }
   MPI_Finalize();
 }
