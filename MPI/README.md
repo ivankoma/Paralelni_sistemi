@@ -1,5 +1,7 @@
 # MPI
 
+[MPI Tutorial](<https://mpitutorial.com>)
+
 ```c
 #include "stdafx.h"
 #include "mpi.h"
@@ -37,24 +39,26 @@ int MPI_Address(const void *input_location, MPI_Aint *output_address)
 ### MPI_Send
 
 ```c
-int MPI_Send(const void *buf, //initial address of send buffer (choice) 
-             int count, 
-             MPI_Datatype datatype, 
-             int dest,        // rank of destination (integer) 
-             int tag,         // message tag (integer) 
-             MPI_Comm comm)   // communicator (handle) 
+int MPI_Send(
+      const void *buf, //initial address of send buffer (choice) 
+      int count, 
+      MPI_Datatype datatype, 
+      int dest,        // rank of destination (integer) 
+      int tag,         // message tag (integer) 
+      MPI_Comm comm)   // communicator (handle) 
 ```
 
 ### MPI_Recv
 
 ```c
-int MPI_Recv(void *buf, 
-            int count, 
-            MPI_Datatype datatype, 
-            int source, 
-            int tag, 
-            MPI_Comm comm, 
-            MPI_Status *status)
+int MPI_Recv(
+      void *buf, 
+      int count, 
+      MPI_Datatype datatype, 
+      int source, 
+      int tag, 
+      MPI_Comm comm, 
+      MPI_Status *status)
 ```
 
 ### MPI_Bcast
@@ -64,11 +68,12 @@ Broadcasts a message from the process with rank "root" to all other processes of
 [How to use](https://stackoverflow.com/questions/7864075/using-mpi-bcast-for-mpi-communication)
 
 ```c
-int MPI_Bcast(void *buffer,
-              int count, 
-              MPI_Datatype datatype, 
-              int root, 
-              MPI_Comm comm)
+int MPI_Bcast(
+      void *buffer,
+      int count, 
+      MPI_Datatype datatype, 
+      int root, 
+      MPI_Comm comm)
 ```
 
 ### MPI_Scatter
@@ -78,14 +83,15 @@ int MPI_Bcast(void *buffer,
 ![Difference](https://mpitutorial.com/tutorials/mpi-scatter-gather-and-allgather/broadcastvsscatter.png)
 
 ```c
-int MPI_Scatter(const void *sendbuf, 
-                int sendcount, 
-                MPI_Datatype sendtype,
-                void *recvbuf, 
-                int recvcount, 
-                MPI_Datatype recvtype, 
-                int root,
-                MPI_Comm comm)
+int MPI_Scatter(
+      const void *sendbuf, 
+      int sendcount, 
+      MPI_Datatype sendtype,
+      void *recvbuf, 
+      int recvcount, 
+      MPI_Datatype recvtype, 
+      int root,
+      MPI_Comm comm)
 ```
 
 - `sendbuf` address of send buffer (choice, significant only at root) 
@@ -101,14 +107,15 @@ int MPI_Scatter(const void *sendbuf,
 ![Tutorial](https://mpitutorial.com/tutorials/mpi-scatter-gather-and-allgather/gather.png)
 
 ```c
-int MPI_Gather(const void *sendbuf,
-              int sendcount,
-              MPI_Datatype sendtype,
-              void *recvbuf,
-              int recvcount,
-              MPI_Datatype recvtype,
-              int root, 
-              MPI_Comm comm)
+int MPI_Gather(
+      const void *sendbuf,
+      int sendcount,
+      MPI_Datatype sendtype,
+      void *recvbuf,
+      int recvcount,
+      MPI_Datatype recvtype,
+      int root, 
+      MPI_Comm comm)
 ```
 
 - `sendbuf` starting address of send buffer (choice) 
@@ -122,11 +129,12 @@ int MPI_Gather(const void *sendbuf,
 ### MPI_type_struct
 
 ```c
-int MPI_Type_struct(int count,
-                   const int *array_of_blocklengths,
-                   const MPI_Aint *array_of_displacements,
-                   const MPI_Datatype *array_of_types,
-                   MPI_Datatype *newtype)
+int MPI_Type_struct(
+      int count,
+      const int *array_of_blocklengths,
+      const MPI_Aint *array_of_displacements,
+      const MPI_Datatype *array_of_types,
+      MPI_Datatype *newtype)
 ```
 
 
@@ -156,10 +164,10 @@ Omogucava da formiramo izveden tip podatka gde su blokovi koji čine izveden tip
 
 ```c
 int MPI_Type_vector(
-  int count, 
-  int block_len,
-  int stride, //predstavlja razmak izmedju pocetaka blokova izrazen u elementima starog tipa (stari tip je sledeci argument funkcije),
-  MPI_Type oldtype);
+      int count, 
+      int block_len,
+      int stride, //predstavlja razmak izmedju pocetaka blokova izrazen u elementima starog tipa (stari tip je sledeci argument funkcije),
+      MPI_Type oldtype);
 ```
 
 - `count` number of blocks (nonnegative integer) 
@@ -192,11 +200,11 @@ count = n, blocklen=1, stride=n, MPI_Int;
 
 ```c
 MPI_Type_indexed(
-  int count, 
-  int *array_of_blocklens,
-  int *array_of_displacements, 
-  MPI_Datatype oldtype,
-  MPI_Datatype *newtype
+      int count, 
+      int *array_of_blocklens,
+      int *array_of_displacements, 
+      MPI_Datatype oldtype,
+      MPI_Datatype *newtype
 );
 ```
 
@@ -476,14 +484,6 @@ void main(int argc, char *argv[]) {
   MPI_Type_commit(&nova_struktura);
   ...
 ```
-
----
-
-## Lab 1___________ ___________ ___________ ???
-
-### 1
-
-> Napisati MPI program koji pronalazi minimalnu vrednost u delu matrice reda n (n-parno) koga čine kolone matrice sa parnim indeksom (j=0,2,4,...). Matrica je inicijalizovana u master procesu (P0). Svaki proces treba da dobije elemente kolona sa parnim indeksom iz odgovarajućih n/p vrsta (p-broj procesa, n deljivo sa p) i nađe lokalni minimum. Na taj način, P0 dobija elemente kolona sa parnim indeksom iz prvih n/p vrsta i nalazi lokalni minimum, P1 dobija elemente kolona sa parnim indeksom iz sledećih n/p vrsta i nalazi lokalni minimum itd. Nakon toga, u master procesu se izračunava i na ekranu prikazuje globalni minimum u traženom delu matrice. Zadatak realizovati korišćenjem isključivo grupnih operacija i izvedenih tipova podataka.
 
 ---
 
@@ -779,7 +779,7 @@ a00*b00 + a01*b10   a00*b01 + a01*b11
 a10*b00 + a11*b10   a10*b01 + a11*b11
 ```
 
-```
+```c
 void main(int argc, char * argv[]) {
   int A[n][n], B[n][n], C[n][n], tmp[n][n], one_row[n], one_col[n];
   int rank, i, j;
@@ -816,3 +816,5 @@ void main(int argc, char * argv[]) {
   MPI_Finalize();
 }
 ```
+
+---
