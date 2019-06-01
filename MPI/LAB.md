@@ -321,3 +321,181 @@ void main(int argc, char * argv[]) {
   MPI_Finalize();
 }
 ```
+
+### Zadatak 5
+
+
+> Napisati MPI program koji realizuje množenje matrice *Am\*n* i matrice *Bn\*k*, čime se dobija rezultujuća matrica *Cm\*k*. Množenje se obavlja tako što master proces šalje svakom procesu celu matricu A i po *k/p* kolona matrice *B* (*p* broj procesa, *k* je deljivo sa *p*). Svi procesi učestvuju u izračunavanju. Konačni rezultat množenja se nalazi u master procesu koji ga i prikazuje. Predvideti da se slanje *k/p* kolona matrice *B* svakom procesu obavlja odjednom i to direktno iz matrice *B*. Zadatak rešiti korišćenjem grupnih operacija i izvedenih tipova podataka.
+
+p=2
+A m=3 n=5
+
+||||||
+|-|-|-|-|-|
+||||||
+||||||
+||||||
+
+B n=5 k=4
+
+|||||
+|-|-|-|-|
+|p1|p1|p2|p2|
+|p1|p1|p2|p2|
+|p1|p1|p2|p2|
+|p1|p1|p2|p2|
+|p1|p1|p2|p2|
+
+C m=3 k=4
+
+|||||
+|-|-|-|-|
+|||||
+|||||
+|||||
+
+```
+A:
+0       1       2       3       4
+5       6       7       8       9
+10      11      12      13      14
+
+B:
+0       1       2       3
+4       5       6       7
+8       9       10      11
+12      13      14      15
+16      17      18      19
+
+rank=0 C:
+120     130     0       0
+320     355     0       0
+520     580     0       0
+
+rank=1 C:
+0       0       140     150
+0       0       390     425
+0       0       640     700
+
+C:
+120     130     140     150
+320     355     390     425
+520     580     640     700
+```
+
+```c
+#define p 2 // number of processes
+
+void main(int argc, char * argv[]) {
+  const int m = 3, n = 5, k = 4;
+  int A[m][n], B[n][k], C[m][k], local_C[m][k], local_B[n*(k / p)];
+  int rank;
+  MPI_Datatype custom_col, succesive_custom_col;
+  MPI_Init(&argc, &argv);
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+  if (rank == 0) {
+    fill_array(&A[0][0], m*n, "i");
+    fill_array(&B[0][0], n*k, "i");
+    printf("\nA:\n");
+    print_matrix(&A[0][0], m, n);
+    printf("\nB:\n");
+    print_matrix(&B[0][0], n, k);
+  }
+
+  MPI_Bcast(&A[0][0], m*n, MPI_INT, 0, MPI_COMM_WORLD);
+  
+  MPI_Type_vector(n, k/p, k, MPI_INT, &custom_col);
+  MPI_Type_create_resized(custom_col, 0, (k / p) * sizeof(int), &succesive_custom_col);
+  MPI_Type_commit(&succesive_custom_col);
+
+  MPI_Scatter(&B[0][0], 1, succesive_custom_col, &local_B, n * (k / p), MPI_INT, 0, MPI_COMM_WORLD);
+
+  fill_array(&local_C[0][0], m*k, "0");
+  
+  for (int y = 0; y < m; y++) {
+    int tmp = 0;
+    for (int x = 0; x < k/p; x++) {
+      tmp = 0;
+      for (int i = 0; i < n; i++) {
+        tmp += A[y][i] * local_B[2 * i + x];
+      }
+      local_C[y][x + rank*(k/p)] = tmp;
+    }
+  }
+  printf("\nrank=%d C:\n", rank);
+  print_matrix(&local_C[0][0], m, k);
+  
+  MPI_Reduce(&local_C[0][0], &C[0][0], m*k, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+
+  if (rank == 0) {
+    printf("\nC:\n");
+    print_matrix(&C[0][0], m, k);
+  }
+
+  MPI_Finalize();
+}
+```
+
+### Zadatak 6
+
+> Napisati MPI program koji realizuje množenje matrica A i B reda n, čime se dobija rezultujuća matrica C. Nakon toga, u matrici C pronaći maksimalnu vrednost elemenata svake kolone. Množenje se obavlja tako što master proces šalje svakom procesu radniku po jednu vrstu prve matrice i celu drugu matricu. Svaki proces računa po jednu vrstu
+rezultujuće matrice i šalje master procesu. Svi procesi učestvuju u izračunavanju. Štampati dobijenu matricu kao i maksimalne vrednosti elemenata svake kolone. Zadatak rešiti korišćenjem grupnih operacija.
+
+```
+A:
+0       1       2       3
+4       5       6       7
+8       9       10      11
+12      13      14      15
+
+B:
+0       2       4       6
+8       10      12      14
+16      18      20      22
+24      26      28      30
+
+C:
+112     124     136     148
+304     348     392     436
+496     572     648     724
+688     796     904     1012
+```
+
+```c
+void main(int argc, char * argv[]) {
+  const int n = p;
+  int A[n][n], B[n][n], C[n][n], local_C[n], local_A_row[n], rank;
+  MPI_Datatype row;
+  MPI_Init(&argc, &argv);
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  if (rank == 0) {
+    fill_array(&A[0][0], n*n, "i");
+    fill_array(&B[0][0], n*n, "i");
+    printf("\nA:\n");
+    print_matrix(&A[0][0], n, n);
+    printf("\nB:\n");
+    print_matrix(&B[0][0], n, n);
+  }
+  MPI_Type_vector(n, 1, 1, MPI_INT, &row);
+  MPI_Type_commit(&row);
+  MPI_Bcast(&B[0][0], n*n, MPI_INT, 0, MPI_COMM_WORLD);
+  MPI_Scatter(&A[0][0], 1, row, local_A_row, n, MPI_INT, 0, MPI_COMM_WORLD);
+
+  fill_array(&local_C[0], n,"0");
+  for (int i = 0; i < n; i++) {
+    for (int j = 0; j < n; j++) {
+      local_C[i] += local_A_row[j] * B[j][i];
+    }
+  }
+
+  MPI_Gather(local_C, n, MPI_INT, &C[0][0], n, MPI_INT, 0, MPI_COMM_WORLD);
+
+  if (rank == 0) {
+    printf("\nC:\n");
+    print_matrix(&C[0][0], n, n);
+  }
+
+  MPI_Finalize();
+}
+```
