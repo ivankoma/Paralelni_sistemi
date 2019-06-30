@@ -818,3 +818,340 @@ void main(int argc, char * argv[]) {
 ```
 
 ---
+
+## MPI 3. nedelja
+### Grupe i komunikatori
+
+[Tutorial](https://mpitutorial.com/tutorials/introduction-to-groups-and-communicators/)
+
+
+```
+MPI_Comm_group(
+  MPI_Comm comm,
+  MPI_Group* group)
+```
+
+Kao argument uzima komunikator i vraća odgovarajuću grupu procesa. Ova funkcija je važna za kasnije formiranje novih grupa od osnovne grupe.
+
+---
+
+```
+MPI_Group_rank(
+  MPI_Group group,
+  int *rank)
+```
+
+Vraća identifikator procesa unutar grupe.
+
+---
+
+```
+MPI_Group_size(
+  MPI_Group group,
+  int *size)
+```
+
+Vraća broj procesa unutar grupe.
+
+---
+
+```
+MPI_Group_excl(
+  MPI_Group group,
+  int count, 
+  int *nonmembers,
+  MPI_Group *new_group)
+```
+
+Vraća novu grupu tako što se iz stare grupe isključe procesi sa identifikatorima koji su definisani sa `nonmembers`, i kojih ima `count`. Redosled procesa u novoj grupi prati redosled procesa u staroj grupi.
+
+---
+
+```
+MPI_Group_incl(
+  MPI_Group old_group,
+  int n,
+  const int ranks[],
+  MPI_Group* newgroup)
+```
+
+- `group` group (handle) 
+- `n` number of elements in array ranks (and size of `newgroup`)(integer) 
+- `ranks` ranks of processes in group to appear in `newgroup` (array of integers).
+
+Vraća novu grupu tako što procesi sa identifikatorima iz stare grupe koji su definisani sa `ranks` čine novu grupu. Procesa u novoj grupi ima `count`. Proces *members[i]* u novoj grupi ima rang *i*.
+
+---
+
+```
+MPI_Group_intersection(
+  MPI_Group group1,
+  MPI_Group group2,
+  MPI_Group *newgroup)
+```
+
+Vraća novu grupu koja se sastoji od procesa preseka grupa `group1` i `group2`, s tim što je redosled procesa u novoj grupi kao u prvoj grupi
+
+---
+
+![union](https://mpitutorial.com/tutorials/introduction-to-groups-and-communicators/groups.png)
+
+```
+MPI_Group_union(
+  MPI_Group group1,
+  MPI_Group group2,
+  MPI_Group* newgroup)
+```
+
+Vraća novu grupu koja se sastoji od procesa grupe `group1` na koju se nadovezuju elementi `group2` koji nisu `group1`
+
+---
+
+```
+MPI_Group_difference(
+  MPI_Group group1,
+  MPI_Group group2,
+  MPI_Group *newgroup)
+```
+
+Vraća novu grupu koja se sastoji od procesa grupe `group1` koji nisu `group2` uređene kao u `group1`.
+
+---
+
+```
+MPI_Comm_create(
+  MPI_Comm old_comm,
+  MPI_Group group,
+  MPI_Comm* newcomm)
+```
+
+- `comm` communicator (handle) 
+- `group` group, which is a subset of the group of comm (handle) 
+
+Kreira novi komunikator `new_comm` od procesa iz grupe group koja kreirana iz `old_comm`.
+
+The key difference however (besides the lack of the tag argument), is that `MPI_Comm_create_group` is only collective over the group of processes contained in group, where `MPI_Comm_create` is collective over every process in `comm`.
+
+---
+
+![communicators](https://mpitutorial.com/tutorials/introduction-to-groups-and-communicators/comm_split.png)
+
+```
+MPI_Comm_split(
+  MPI_Comm old_comm,
+  int color,
+  int key,
+  MPI_Comm* newcomm)
+```
+
+- `comm` communicator (handle) 
+- `color` control of subset assignment (nonnegative integer or `MPI_UNDEFINED`). Processes with the same color are in the same new communicator.
+- `key` control of rank assignment (integer) 
+
+Razbija komunikator `old_comm` na više delova tako sto svi procesi koji imaju istu vrednost za `color` pripadaju istom podkomunikatoru. `Key` određuje redosled procesa u podkomunikatorima. Ako je `key` isti za sve procese onda se redosled procesa preuzima iz starog komunikatora
+
+---
+
+`MPI_Comm_free(MPI_Comm *comm)`
+
+MPI has a limited number of objects that it can create at a time and not freeing your objects could result in a runtime error if MPI runs out of allocatable objects.
+
+---
+
+```
+void main(int argc, char * argv[]) {
+  MPI_Init(&argc, &argv);
+
+  int world_rank, world_size;
+  MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+
+  int color = world_rank / 4; // Determine color based on row
+
+  // Split the communicator based on the color and use the original rank for ordering
+  MPI_Comm row_comm;
+  MPI_Comm_split(MPI_COMM_WORLD, color, world_rank, &row_comm);
+
+  int row_rank, row_size;
+  MPI_Comm_rank(row_comm, &row_rank);
+  MPI_Comm_size(row_comm, &row_size);
+
+  printf("WORLD RANK/SIZE: %d/%d \t ROW RANK/SIZE: %d/%d\n", world_rank, world_size, row_rank, row_size); 
+  MPI_Comm_free(&row_comm);
+  MPI_Finalize();
+}
+```
+
+---
+
+### Zadatak 1
+
+> Napisati MPI program kojim se vrši podela procesa članova komunikatora MPI_COMM_WORLD u dve grupe: grupu procesa sa neparnim identifikatorima i grupu procesa sa parnim identifikatorima.
+
+`#define p 7`
+
+```
+rank=0 rank_u_parnoj_grupi=0      rank_u_neparnoj_grupi=-32766
+rank=1 rank_u_parnoj_grupi=-32766 rank_u_neparnoj_grupi=0
+rank=2 rank_u_parnoj_grupi=1      rank_u_neparnoj_grupi=-32766
+rank=3 rank_u_parnoj_grupi=-32766 rank_u_neparnoj_grupi=1
+rank=4 rank_u_parnoj_grupi=2      rank_u_neparnoj_grupi=-32766
+rank=5 rank_u_parnoj_grupi=-32766 rank_u_neparnoj_grupi=2
+rank=6 rank_u_parnoj_grupi=3      rank_u_neparnoj_grupi=-32766
+```
+
+```c
+MPI_Group group_world, grupa_neparnih, grupa_parnih;
+int i, num_p, br_parni, members[8], rank_u_parnoj_grupi, rank_u_neparnoj_grupi, rank;
+MPI_Init(&argc, &argv);
+MPI_Comm_size(MPI_COMM_WORLD, &num_p);
+MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+MPI_Comm_group(MPI_COMM_WORLD, &group_world);
+br_parni = (num_p + 1) / 2;
+for (i = 0; i<br_parni; i++) {
+  members[i] = 2 * i;
+};
+
+MPI_Group_incl(group_world, br_parni, members, &grupa_parnih);
+// ^ Vraća novu grupu tako što procesi sa identifikatorima iz stare grupe koji su definisani sa `ranks` čine novu grupu
+
+MPI_Group_excl(group_world, br_parni, members, &grupa_neparnih);
+// ^ Vraća novu grupu tako što se iz stare grupe isključe procesi sa identifikatorima koji su definisani sa `nonmembers`, i kojih ima `count`.
+
+MPI_Group_rank(grupa_parnih, &rank_u_parnoj_grupi);
+MPI_Group_rank(grupa_neparnih, &rank_u_neparnoj_grupi);
+
+printf("rank=%d rank_u_parnoj_grupi=%d rank_u_neparnoj_grupi=%d\n", rank, rank_u_parnoj_grupi, rank_u_neparnoj_grupi);
+
+MPI_Finalize();
+```
+
+Drugi način:
+
+```
+rank=0 key=7 new_rank=0 color=0 new_size=4
+rank=1 key=7 new_rank=0 color=1 new_size=3
+rank=2 key=7 new_rank=1 color=0 new_size=4
+rank=3 key=7 new_rank=1 color=1 new_size=3
+rank=4 key=7 new_rank=2 color=0 new_size=4
+rank=5 key=7 new_rank=2 color=1 new_size=3
+rank=6 key=7 new_rank=3 color=0 new_size=4
+```
+
+```
+int i, color, rank, new_rank, new_size, key;
+MPI_Comm new_comm;
+MPI_Init(&argc, &argv);
+MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+color = rank % 2;
+key = 7;
+MPI_Comm_split(MPI_COMM_WORLD, color, key, &new_comm);
+MPI_Comm_size(new_comm, &new_size);
+MPI_Comm_rank(new_comm, &new_rank);
+printf("rank=%d key=%d new_rank=%d color=%d new_size=%d\n", rank, key, new_rank, color, new_size);
+MPI_Finalize();
+```
+
+### Zadatak 2
+
+`#define p 6` 
+
+```
+current_rank=0 row_id=0 col_id=0 rank_in_row=0 rank_in_col=0
+current_rank=1 row_id=0 col_id=1 rank_in_row=1 rank_in_col=0
+current_rank=2 row_id=1 col_id=0 rank_in_row=0 rank_in_col=1
+current_rank=3 row_id=1 col_id=1 rank_in_row=1 rank_in_col=1
+current_rank=4 row_id=2 col_id=0 rank_in_row=0 rank_in_col=2
+current_rank=5 row_id=2 col_id=1 rank_in_row=1 rank_in_col=2
+```
+
+```
+int row_id, col_id;
+int const COLUMNS = 2;
+MPI_Comm row_comm, col_comm;
+int global_rank, rank_in_row, rank_in_col;
+MPI_Init(&argc, &argv);
+MPI_Comm_rank(MPI_COMM_WORLD, &global_rank);
+row_id = global_rank / COLUMNS; /* 001122 */
+col_id = global_rank % COLUMNS; /* 010101 */
+MPI_Comm_split(MPI_COMM_WORLD, row_id, col_id, &row_comm);
+MPI_Comm_split(MPI_COMM_WORLD, col_id, row_id, &col_comm);
+
+MPI_Comm_rank(row_comm, &rank_in_row);
+MPI_Comm_rank(col_comm, &rank_in_col);
+
+printf("current_rank=%d row_id=%d col_id=%d rank_in_row=%d rank_in_col=%d", current_rank, row_id, col_id, rank_in_row, rank_in_col);
+MPI_Finalize();
+```
+
+### Zadatak 3
+
+> Napisati MPI program koji realizuje množenje matrica A i B reda n, čime se dobija rezultujuća matrica C=A*B. Množenje se obavlja tako što master proces (sa identifikatorom 0) šalje svakom procesu radniku jednu kolonu matrice A i jednu vrstu matrice B. Master proces ne učestvuje u izračunavanju. Štampati dobijenu matricu.
+
+```
+#define p 4 // number of processes
+#define n 3 // !!! Matrix is n*n, not p*p, because one process doesn't calculate
+#define TAG 32
+using namespace std; 
+
+void main(int argc, char * argv[]) {
+  int rank, worker_rank;
+  int A[n][n], B[n][n], tmp[n][n], C[n][n];
+  int one_row[n], one_col[n];
+  int const ROOT = 0;
+  int ranks[] = { ROOT };  // Exclude process 0
+  int i, j;
+  MPI_Status status;
+  MPI_Datatype col;
+  MPI_Group workers_group, world_group;
+  MPI_Comm workers_comm;
+
+  MPI_Init(&argc, &argv);
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+  MPI_Type_vector(n, 1, n, MPI_INT, &col);
+  MPI_Type_commit(&col);
+
+  MPI_Comm_group(MPI_COMM_WORLD, &world_group);
+  MPI_Group_excl(world_group, 1, ranks, &workers_group);  // Exclude proces 0 which only creates and sends the matrices and prints the result
+  MPI_Comm_create(MPI_COMM_WORLD, workers_group, &workers_comm);
+  MPI_Group_rank(workers_group, &worker_rank);
+
+  if (rank == ROOT)
+  {
+    fill_array(&A[0][0], n*n, "i");
+    fill_array(&B[0][0], n*n, "2*i");
+
+    printf("\nA:\n");
+    print_matrix(&A[0][0], n, n);
+
+    printf("\nB:\n");
+    print_matrix(&B[0][0], n, n);
+    for (i = 0; i < n; i++)
+    {
+      MPI_Send(&A[0][i], 1, col, i + 1, TAG + 1, MPI_COMM_WORLD); //svakom procesu odgovarajucu kolonu
+      MPI_Send(&B[i][0], n, MPI_INT, i + 1, TAG, MPI_COMM_WORLD); //svakom procesu odgovarajucu vrstu
+    }
+  }
+  else
+  {
+    MPI_Recv(&one_col[0], n, MPI_INT, ROOT, TAG, MPI_COMM_WORLD, &status);
+    MPI_Recv(&one_row[0], n, MPI_INT, ROOT, TAG + 1, MPI_COMM_WORLD, &status);
+    for (int y = 0; y<n; y++)
+    {
+      for (int x = 0; x < n; x++)
+        tmp[y][x] = one_row[y] * one_col[x];
+        //tmp[x][y] = one_col[y] * one_row[x];
+    }
+    //printf("rank=%d\n", rank);
+    //print_matrix(&tmp[0][0], n, n);
+    MPI_Reduce(&tmp, &C, n*n, MPI_INT, MPI_SUM, ROOT, workers_comm);
+  }
+  if (worker_rank == 0)
+  {
+    printf("\nC:\n");
+    print_matrix(&C[0][0], n, n);
+  }
+  MPI_Finalize();
+}
+```
