@@ -84,6 +84,8 @@ int main()
 
 ### Barrier
 
+`barrier` will enforce every thread to wait at the barrier until all threads have reached the barrier.
+
 ```c
 #pragma omp parallel
 {
@@ -96,7 +98,8 @@ int main()
 
 ### Critical
 
-Mutual exclusion.   Use this because it is more general.
+Mutual exclusion. Use this because it is more general.
+All threads execute the code, but only one at a time.
 
 ```c
 float res;
@@ -118,7 +121,7 @@ float res;
 
 ## Atomic
 
-Shortcut to Critical. 
+Shortcut to Critical. Only used for the update of a memory location.
 
 `x++``++x``x--``--x`
 
@@ -318,6 +321,8 @@ avg = avg / MAX;
 
 ### `master`
 
+There is no implied barrier on entry or exit.
+
 ```c
 #pragma omp parallel
 {
@@ -325,7 +330,7 @@ avg = avg / MAX;
 #pragma omp master    // Only master thread will run this block of code. No synchronization is implied.
 {
     exchange_boundaries();
-}
+} // There is no implicit barrier so other threads will not wait for master to finish.
 #pragma omp barrier   // We can specify barrier after omp master.
     do_many_other_things();
 }
@@ -366,6 +371,12 @@ One thread does one section and other does other, but it doesn't matter which th
 
 ## Locks
 
+Locks provide greater flexibility over critical sections and atomic updates (possible to implement asynchronous behaviour).
+The so-called lock variable, is a special variable and should be manipulated through the API only.
+
+- Simple locks: may not be locked if already in a locked state `omp_init_lock`.
+- Nestable locks: may be locked multiple times by the same thread before being unlocked `omp_init_nest_lock`.
+
 ```c
 omp_init_lock());
 omp_set_lock();
@@ -394,6 +405,8 @@ for(i=0;i<NBUCKETS;i++)
 ```
 
 ## OpenMP Runtime Library Routines
+
+The runtime functions take precedence over the corresponding environment variables.
 
 ```c
 omp_set_num_threads(); // Requests certain number of threads
@@ -762,6 +775,9 @@ int main()
 ## Threadprivate Data and How to Support Libraries
 
 Makes global data private to a thread.
+`threadprivate` copies of the designated global variables and common blocks will be made. 
+Initial data is undefined, unless `copyin` is used.
+The number of threads has to remain the same for all the parallel regions (i.e. no dynamic threads).
 
 ```c
 int counter = 0;
