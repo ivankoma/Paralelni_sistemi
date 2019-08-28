@@ -99,7 +99,7 @@ int main()
 ### Critical
 
 Mutual exclusion. Use this because it is more general.
-All threads execute the code, but only one at a time.
+All threads execute the code, but only one at a time, one after another.
 
 ```c
 float res;
@@ -111,7 +111,7 @@ float res;
     nthrds = omp_get_num_threads();
     for(i=id;i<niters;i+=nthrds){
         B = big_job(i);
-#pragma omp critical // Only one thread executes this block of code
+#pragma omp critical
 //{
     res += consume(B);
 //}        
@@ -119,9 +119,53 @@ float res;
 }
 ```
 
+Better example. 
+
+Sum of `1 + 2 + 3 + 4 + 5 + 6 = 21`:
+
+```c
+#define NUM_THREADS 3
+int main()
+{
+    int i, sum=0;
+    omp_set_num_threads(NUM_THREADS);
+#pragma omp parallel private(i)
+{
+    int local_sum = 0;
+#pragma omp for
+    for (i = 1; i < 7; i++) {
+        printf("Thread %d: local_sum(%d)+=%d\n", omp_get_thread_num(), local_sum,i);
+        local_sum += i;
+    }
+#pragma omp critical (optional_name)
+
+    printf("Thread %d: sum(%d)+=local_sum(%d)\n", omp_get_thread_num(), sum, local_sum);
+    sum += local_sum; // This can also be calculated using `atomic`
+
+}
+printf("After parallel region: sum=%d", sum);
+    return 0;
+}
+```
+
+Output:
+
+```c
+Thread 0: local_sum(0)+=1
+Thread 2: local_sum(0)+=5
+Thread 2: local_sum(5)+=6
+Thread 1: local_sum(0)+=3
+Thread 1: local_sum(3)+=4
+Thread 0: local_sum(1)+=2
+Thread 1: sum(0)+=local_sum(7)
+Thread 0: sum(7)+=local_sum(3)
+Thread 2: sum(10)+=local_sum(11)
+After parallel region: sum=21
+```
+
 ## Atomic
 
-Shortcut to Critical. Only used for the update of a memory location.
+Shortcut to Critical. Only used for the update of a memory location. Can only execute one operation.
 
 `x++``++x``x--``--x`
 
@@ -205,11 +249,9 @@ is the same as:
 
 ```c
 #pragma omp parallel omp for
-{
     for (i=0;i<n;i++){
         do();
     }
-}
 ```
 
 ### Schedule
@@ -266,7 +308,10 @@ avg = avg / MAX;
 
 `reduction (op : list)`
 
-Local copy of each list variable is made (locally in each thread) and initialized depending on the `op`. Updates occur on the local copy. When done, local copies are reduced into a single value and combined with the original global value.
+Local copy of each list variable is made (locally in each thread) and initialized depending on the `op`. 
+Updates occur on the local copy. When done, local copies are reduced into a single value and combined with the original global value. 
+There is no need to explicitly define the variable as `shared`. 
+You can't do other operations with the variable except the one defined in `reduction` statement.
 
 ```c
 double avg=0.0, A[MAX];
@@ -350,6 +395,41 @@ There is no implied barrier on entry or exit.
 }
 ```
 
+### `ordered`
+
+```c
+#define NUM_THREADS 2
+int main()
+{
+    int i;
+    omp_set_num_threads(NUM_THREADS);
+#pragma omp parallel for private(i) ordered
+    for (i = 0; i < 6; i++) {
+        printf("? Thread %d in random order  i=%d\n", omp_get_thread_num(),i);
+        #pragma omp ordered
+        printf(">>Ordered thread %d i=%d\n", omp_get_thread_num(), i);
+    }
+    return 0;
+}
+```
+
+Output:
+
+```c
+? Thread 0 in random order  i=0
+? Thread 1 in random order  i=3
+>>Ordered thread 0 i=0
+? Thread 0 in random order  i=1
+>>Ordered thread 0 i=1
+? Thread 0 in random order  i=2
+>>Ordered thread 0 i=2
+>>Ordered thread 1 i=3
+? Thread 1 in random order  i=4
+>>Ordered thread 1 i=4
+? Thread 1 in random order  i=5
+>>Ordered thread 1 i=5
+```
+
 ### Section and sections
 
 One thread does one section and other does other, but it doesn't matter which thread does what.
@@ -419,7 +499,7 @@ omp_get_dynamic();     // Am I dynamic mode or not?
 omp_num_procs();       // Get actual number of cores
 ```
 
-Get actual number of threads:
+### Get actual number of threads:
 
 ```c
 #include <omp.h>
@@ -772,12 +852,13 @@ int main()
 }
 ```
 
-## Threadprivate Data and How to Support Libraries
+## Threadprivate Data
 
 Makes global data private to a thread.
 `threadprivate` copies of the designated global variables and common blocks will be made. 
 Initial data is undefined, unless `copyin` is used.
 The number of threads has to remain the same for all the parallel regions (i.e. no dynamic threads).
+Values saved in `threadprivate` variables can span across multiple parallel regions only if the number of theads is constant (`omp_set_dynamic(0)`).
 
 ```c
 int counter = 0;
@@ -788,4 +869,150 @@ int increment_counter()
     counter++;
     return(counter);
 }
+```
+
+Code:
+
+```c
+#include <omp.h>
+#include <stdio.h>
+int th_a, p_b, i;
+#pragma omp threadprivate(th_a)
+main() {
+    omp_set_num_threads(4);
+    omp_set_dynamic(0);
+#pragma omp parallel private(p_b)
+    {
+        int tid = omp_get_thread_num();
+        th_a = tid;
+        p_b = tid;
+        printf("Thread %d: th_a=%d p_b=%d\n", tid, th_a, p_b);
+    }
+
+    printf("Master thread does serial work here.\np_b is private and that is why its value is lost.\n");
+#pragma omp parallel
+    {
+        int tid = omp_get_thread_num();
+        printf("Thread %d: th_a=%d p_b=%d\n", tid, th_a, p_b);
+    }
+}
+```
+
+Output:
+
+```c
+Thread 0: th_a=0 p_b=0
+Thread 1: th_a=1 p_b=1
+Thread 2: th_a=2 p_b=2
+Thread 3: th_a=3 p_b=3
+Master thread does serial work here.
+p_b is private and that is why its value is lost.
+Thread 0: th_a=0 p_b=0
+Thread 1: th_a=1 p_b=0
+Thread 2: th_a=2 p_b=0
+Thread 3: th_a=3 p_b=0
+```
+
+### `copyin`
+
+Code:
+
+```c
+#include <stdlib.h>
+#include <stdio.h>
+#include <omp.h>
+int global_var = -1;
+#pragma omp threadprivate(global_var)
+
+void build()
+{
+    printf("thread=%d\tglobal_var=%d\n", omp_get_thread_num(), global_var);
+}
+void without_copyin(int x)
+{
+    global_var = x;
+#pragma omp parallel
+    {
+        build();
+    }
+}
+
+void with_copyin(int x)
+{
+    global_var = x;
+#pragma omp parallel copyin(global_var)
+    {
+        build();
+    }
+}
+
+int main() {
+    omp_set_num_threads(4);
+    omp_set_dynamic(0);
+    printf("without_copyin(5):\n");
+    without_copyin(5);
+    printf(">> Non-parallel region: global_var=%d\n", global_var);
+    printf("---\nwith_copyin(6):\n");
+    with_copyin(6);
+    printf(">> Non-parallel region: global_var=%d\n", global_var);
+    printf("---\nAnother parallel region:\n");
+#pragma omp parallel
+    {
+        printf("Thread %d: global_var=%d\n", omp_get_thread_num(), global_var);
+    }
+}
+```
+
+Output:
+
+```c
+without_copyin(5):
+thread=0        global_var=5
+thread=1        global_var=-1
+thread=2        global_var=-1
+thread=3        global_var=-1
+>> Non-parallel region: global_var=5
+---
+with_copyin(6):
+thread=2        global_var=6
+thread=3        global_var=6
+thread=0        global_var=6
+thread=1        global_var=6
+>> Non-parallel region: global_var=6
+---
+Another parallel region:
+Thread 0: global_var=6
+Thread 1: global_var=6
+Thread 2: global_var=6
+Thread 3: global_var=6
+```
+
+Example:
+
+```c
+#include <stdlib.h>
+#include <stdio.h>
+#include <omp.h>
+int j;
+#pragma omp threadprivate(j)
+
+int main() {
+    omp_set_num_threads(4);
+    omp_set_dynamic(0);
+    j = 1;
+#pragma omp parallel copyin(j)
+    {
+#pragma omp master //single
+        {
+            j = 2;
+        }
+    }
+    printf("j= %d\n", j);
+}
+```
+
+Output:
+
+```c
+j= 2 // for master j=2; for single j=1; 
 ```
