@@ -354,3 +354,16 @@ healthchecksdb
 MigrationBackup/
 
 # End of https://www.gitignore.io/api/visualstudio
+
+# Created by https://www.gitignore.io/api/cuda
+# Edit at https://www.gitignore.io/?templates=cuda
+
+### CUDA ###
+*.i
+*.ii
+*.gpu
+*.ptx
+*.cubin
+*.fatbin
+
+# End of https://www.gitignore.io/api/cuda
