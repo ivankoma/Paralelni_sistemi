@@ -192,7 +192,7 @@ Atomic can protect loads
 
 ```c
 #pragma omp atomic read
-v = x; // Either will update v with whole value of x or won't update at all
+v = x; // Either will update v with whole value of x or won't update at all 
 ```
 
 ## Calculate Pi with optimization
@@ -360,8 +360,8 @@ avg = avg / MAX;
 #pragma omp for nowait // Since barriers add overhead we can omit it
 //nowait means: don't put barrier at the end of this loop 
     for(i=0;i<N;i++){ B[i] = big_calc2(C,i);}
-    A[id] = big_calc4(id )
-}// Implicit barrier which can't be turned off
+    A[id] = big_calc4(id)
+}// Implicit barrier can't be turned off
 ```
 
 ### `master`
@@ -536,7 +536,7 @@ Global variables are shared among threads. In C `file scope variables` and `stat
 
 Not everything is shared: if it is on the stack it is private to the thread. Stack variables in `functions(C)` called from parallel regions are **private**. Automatic variables within a statement block are private.
 
-**Heap is shared, stack if private.**
+**Heap is shared, stack is private.**
 
 Example:
 
@@ -545,18 +545,18 @@ Example:
 double A[10]              // Heap
 int main(){
     int index[10];        // On heap because it is prior to the parallel region
-    #pragma omp parallel    // SHARED, PRIVATE, FIRSTPRIVATE, LASTPRIVATE
+#pragma omp parallel    // SHARED, PRIVATE, FIRSTPRIVATE, LASTPRIVATE
     // DEFAULT(PRIVATE): Not available in C.
-    // DEFAULT(SHARED): the default. 
+    // DEFAULT(SHARED): Default. 
     // DEFAULT(NONE): I (the compiler) require that you specifically define the datatype of each variable. Useful for debugging.
-        work(index);
+    work(index);
     printf("%d\n", index[0])
 }
 
 extern double A[10]
 void work(int *index){
     double temp[10];    // Stack on each the each thread (*3)
-    static int count;    // Heap
+    static int count;   // Heap
 }
 ```
 
@@ -681,7 +681,7 @@ for(i=0;i<count;i++){
     parr[i] = p;
     p = p->next;
 }
-#pragma omp parellel
+#pragma omp parallel
 {
      #pragma omp for schedule(static,1)
      for(i=0;i<count;i++)
@@ -696,7 +696,7 @@ for(i=0;i<count;i++){
 Tasks are independent units of work. Tasks are composed of: code to execute, data environment, internal control variables (ICV). The runtime system decides when tasks are executed.
 
 ```c
-#pragma omp parellel
+#pragma omp parallel
 {
     #pragma omp task    // Each thread creates following structured block as a task.
     foo();
