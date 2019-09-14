@@ -1,8 +1,35 @@
 # CUDA
 
-> I use Visual Studio 2015 and CUDA Toolkit 9.1. Visual Studio 2015 does not support C++ by default. You have to go to File\New\Project\Visual C++ and click on "Install Visual C++ 2015 Tools for Windows Desktop". 
+> You need an NVIDIA GPU but there is a way to run CUDA code without an NVIDIA GPU.
+> 
+> I used Visual Studio 2015 and CUDA Toolkit 9.1. Visual Studio 2015 does not support C++ by default. You have to go to File\New\Project\Visual C++ and click on "Install Visual C++ 2015 Tools for Windows Desktop".  
+> 
+> Visual Studio 2019 and CUDA Toolking 10.1 also work.
+
+## Courses and tutorials
+
+#### Youtube
+
+[CUDA Tutorials](https://www.youtube.com/playlist?list=PLKK11Ligqititws0ZOoGk3SW-TZCar4dK)
+
+#### Udacity (free)
+
+https://developer.nvidia.com/udacity-cs344-intro-parallel-programming
+
+You need an account to find this course: https://classroom.udacity.com/courses/cs344
+
+#### Udemy (paid)
+
+https://www.udemy.com/cuda-programming-masterclass/
+
+
+
+---
+
+
 
 CUDA program has:
+
 - Host code (main function) (runs on CPU)
 - Device code (runs on GPU)
 
@@ -13,7 +40,7 @@ CUDA program has:
 
 Example: 64 thread grid (4x4x4) has 8 thread blocks (each thread block has 4 threads)
 
-```
+```cpp
 kernel_name <<<number_of_blocks,threads_per_block>>> (arguments);
 
 dim3 variable_name(X, Y, Z) // initialized to 1 by default
@@ -23,7 +50,6 @@ variable_name.X;
 ![](img/blockidx.jpg)
 
 CUDA runtime uniquely initialized `blockIdx` variable for each thread depending on the coordinates of the belonging thread block in the grid. It is dim3 type variable.
-
 
 ![](img/blockdim.jpg)
 
@@ -35,7 +61,7 @@ CUDA runtime uniquely initialized `blockIdx` variable for each thread depending 
 
 #### Example
 
-```
+```cpp
 // 4 blocks which consist of 8x8 treads, in total 256 threads
 int nx = 16, ny = 16;
 dim3 block(8, 8);
@@ -44,13 +70,14 @@ dim3 grid(nx / block.x, ny/block.y);
 
 ### Hello World example
 
-```
+```cpp
 __global__ void unique_idx_calc_threadIdx(int * input) {
   int tid = threadIdx.x;
   printf("threadIdx.x=%d value=%d\n", tid, input[tid]);
 }
 ```
-```
+
+```cpp
 int main(int argc, char * argv[]) {
   int array_size = 8;
   int h_data[] = {23, 9, 4, 53, 65, 12, 1, 33};
@@ -73,16 +100,18 @@ int main(int argc, char * argv[]) {
 ```
 
 ### Unique index calculation
+
 #### Using `threadIdx`, `blockIdx` and `blockDim`
 
-```
+```cpp
 __global__ void unique_gid_calc(int * input) {
   int tid = threadIdx.x;
   int gid = tid + blockIdx.x * blockDim.x;
   printf("blockIdx.x=%d, threadIdx.x=%d, gid=%d, value=%d\n", blockIdx.x, tid, gid, input[gid]);
 }
 ```
-```
+
+```cpp
 int array_size = 16;
 int h_data[] = { 23, 9, 4, 53, 65, 12, 1, 33, 87, 45, 23, 12, 342, 56, 44, 99};
 ...
@@ -92,7 +121,7 @@ dim3 grid(4);
 
 #### Index calculation for 2D array
 
-```
+```cpp
 __global__ void unique_gid_calc_2d(int * input) {
   int gid = threadIdx.x;
   gid += gridDim.x * blockDim.x * blockIdx.y; // row offset
@@ -101,17 +130,16 @@ __global__ void unique_gid_calc_2d(int * input) {
 }
 ```
 
-#### Index calculation for 2D array of 2D 
-
+#### Index calculation for 2D array of 2D
 
 ![](img/2dgrid.jpg)
 
-```
+```cpp
   dim3 block(4);
   dim3 grid(2,2);
 ```
 
-```
+```cpp
 __global__ void unique_gid_calc_2d(int * input) {
   int tid = threadIdx.x + blockDim.x * threadIdx.y;
   int row_offset = blockDim.x * blockDim.y * gridDim.x * blockIdx.y;
@@ -124,7 +152,7 @@ __global__ void unique_gid_calc_2d(int * input) {
 
 ### Transfer memory
 
-```
+```cpp
 __global__ void mem_copy_test(int * input, int number_of_threads) {
   int gid = blockIdx.x * blockDim.x + threadIdx.x;
   if (gid < number_of_threads) {  // in case we have more threads than array has members
@@ -138,10 +166,10 @@ int main(int argc, char * argv[]) {
   //int size = 150; // number of elements in the array
   int * h_input; //host variable
   h_input = (int*)malloc(150 * sizeof(int)); // since malloc returns void pointer, we have to explicitly cast it to the integer pointer 
-  
+
   fill_array(h_input, 150);  //add values
   print_array(h_input, 150);
-  
+
   int * d_input; // This array will be used in CUDA devices
   cudaMalloc((void**)&d_input, 150 * sizeof(int));  
   cudaMemcpy(d_input, h_input, 150 * sizeof(int), cudaMemcpyHostToDevice);
@@ -162,7 +190,7 @@ int main(int argc, char * argv[]) {
 
 ![](img/grid_3_2_2.png)
 
-```
+```cpp
 __global__ void tmp(int * input) {
   const int BLOCK_SIDE_SIZE = blockDim.x * blockDim.y;
   const int BLOCK_SIZE = BLOCK_SIDE_SIZE * blockDim.z;
@@ -201,7 +229,7 @@ int main(int argc, char * argv[]) {
 
 ## Add two arrays
 
-```
+```cpp
 __global__ void sum_two_arrays(int * a, int * b, int * c, int size) {
   int gid = blockIdx.x * blockDim.x + threadIdx.x;
   if (gid < size) {
@@ -211,7 +239,8 @@ __global__ void sum_two_arrays(int * a, int * b, int * c, int size) {
 ```
 
 Validity check: compare if the same result is achieved using both CPU and GPU
-```
+
+```cpp
 void sum_two_arrays_cpu(int * a, int * b, int * c, int size) {
   for (int i = 0; i < size; i++) {
     c[i] = a[i] + b[i];
@@ -230,7 +259,7 @@ void compare_arrays(int *a, int *b, int size) {
 }
 ```
 
-```
+```cpp
 int main(int argc, char * argv[]) {
   int number_of_elements = 10000;
   const int BYTE_SIZE = number_of_elements * sizeof(int);
@@ -276,7 +305,7 @@ int main(int argc, char * argv[]) {
 
 ## Error handling
 
-```
+```cpp
 cudaError error;
 error = cudaMalloc((int**)&d_a, BYTE_SIZE);
 if (error != cudaSuccess) {
@@ -286,7 +315,7 @@ if (error != cudaSuccess) {
 
 ## Benchmarking
 
-```
+```cpp
 #include <ctime>
 ...
 clock_t gpu_start = clock();
@@ -297,9 +326,10 @@ printf("GPU time: %4.6f\n", (double)((double)(gpu_end - gpu_start) / CLOCKS_PER_
 
 # Info
 
-```
+```cpp
 cudaMemcpy (void * destination, const void * source, size_t count, enum cudaMemcpyKind kind)   
 ```
+
 We only use here `cudaMemcpyDeviceToHost` and `cudaMemcpyHostToDevice` for `kind`.
 
 `__shared__` Shared memory is on chip memory which is partitioned amongst thread blocks. It shares life time with the thread block. 
@@ -310,7 +340,7 @@ We only use here `cudaMemcpyDeviceToHost` and `cudaMemcpyHostToDevice` for `kind
 
 Make an array of variable size. Fill it with data. Square each element using CUDA.
 
-```
+```cpp
 #define numberOfThreads 256
 
 __global__ void square(int * a) {
@@ -338,7 +368,7 @@ int main(int argc, char * argv[]) {
 
   cudaMemcpy(cpu_array, gpu_array, byte_size, cudaMemcpyDeviceToHost);
   print_array(cpu_array, number_of_elements);
-  
+
   cudaFree(gpu_array);
   free(cpu_array);
 
@@ -346,19 +376,19 @@ int main(int argc, char * argv[]) {
 }
 ```
 
-## 2. Find min. and max. element of whole matrix using shared memory and thread reduction
+## 2. Find min. and max. element of a whole matrix using shared memory and thread reduction
 
 Since in this solution we use one block, we can't use more than `1024 threads`. 
 For example, if our matrix has `1024 elements`, and we use single block with `256 threads`, each thread will get `4 elements`.
 
-|thread|||||
-|-|-|-|-|-|
-|0.|5|7|9|1|
-|1.|2|8|4|3|
-|2.|9|7|5|1|
-|3.|0|6|3|2|
-|...|||||
-|255.|.|.|.|.|
+| thread |     |     |     |     |
+| ------ | --- | --- | --- | --- |
+| 0.     | 5   | 7   | 9   | 1   |
+| 1.     | 2   | 8   | 4   | 3   |
+| 2.     | 9   | 7   | 5   | 1   |
+| 3.     | 0   | 6   | 3   | 2   |
+| ...    |     |     |     |     |
+| 255.   | .   | .   | .   | .   |
 
 First, each thread finds the maximum and minimum element of the array it got.
 
@@ -373,15 +403,15 @@ Each thread will compare `i-th` element of the first half from (0th until 127th 
 
 Another example if array has 4 elements: In the end we basically have `min[]={0} max[]={9}` because `0-th` index hold the value.
 
-|step|arrays|
-|-|-|
-|0|`min[]={5,2,9,0} max[]={5,2,9,0}`|
-|1|`min[]={5,0,9,0} max[]={9,2,9,0}`|
-|2|`min[]={0,0,9,0} max[]={9,2,9,0}`|
+| step | arrays                            |
+| ---- | --------------------------------- |
+| 0    | `min[]={5,2,9,0} max[]={5,2,9,0}` |
+| 1    | `min[]={5,0,9,0} max[]={9,2,9,0}` |
+| 2    | `min[]={0,0,9,0} max[]={9,2,9,0}` |
 
 Solution:
 
-```c
+```cpp
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 #include "cuda.h"
@@ -392,13 +422,14 @@ Solution:
 #include "utilities.h"
 #define number_of_threads 256
 ```
-```c
+
+```cpp
 __global__ void findMinMax(int * matrix, int * min, int * max, int size) {
     int idx = threadIdx.x;            // Since we use one block.
   __shared__ int s_max[number_of_threads];  // There two arrays are in the shared memory.
   __shared__ int s_min[number_of_threads];
   int slice = size / number_of_threads ;    // Number of elements in each thread. Eg: slice=1030/256=4
-  
+
   int start = slice * idx;          // start = 0, 4, 8...1020
   if (idx == number_of_threads - 1) {      // If this is the last thread, its slice will be a little bit bigger. Eg: 10
     slice = slice + size % number_of_threads;
@@ -421,7 +452,7 @@ __global__ void findMinMax(int * matrix, int * min, int * max, int size) {
   int half = number_of_threads;
   while(half != 0){ // Number of threads must be square of 2.
     __syncthreads();
-    
+
     half >>= 1; // bit shift instead of division. Same as half = half / 2;
     if (idx < half) {
       if (s_min[idx] > s_min[idx + half]) {
@@ -438,7 +469,8 @@ __global__ void findMinMax(int * matrix, int * min, int * max, int size) {
   }
 }
 ```
-```c
+
+```cpp
 int main(int argc, char * argv[]) {
 
   int * cpu_min = (int*)malloc(sizeof(int));
@@ -449,7 +481,7 @@ int main(int argc, char * argv[]) {
   cpu_matrix = (int*)malloc(m*n * sizeof(int));
   fill_array(cpu_matrix, m*n, "random", 10000);
   if (m < 5) print_matrix(cpu_matrix, m, n);
-  
+
   cudaMalloc((void**)&gpu_matrix, m*n * sizeof(int));
   cudaMalloc((void**)&gpu_min, sizeof(int));
   cudaMalloc((void**)&gpu_max, sizeof(int));
@@ -467,16 +499,16 @@ int main(int argc, char * argv[]) {
   cudaFree(gpu_min);
   cudaFree(gpu_max);
   free(cpu_matrix);
-  
+
   return 0;
 }
 ```
 
-## 3. Change sings of numbers in the array. Find out how many positive and negative members does the array have.
+## 3. Change signs of numbers in the array. Find out how many positive and negative members does the array have.
 
 Same logic as for previous example with shared memory and thread reduction.
 
-```c
+```cpp
 __global__ void sign(int * a, int * number_of_positive, int * number_of_negative, int n) {
   int positive_counter = 0, idx = threadIdx.x;    // We use only one block.
   __shared__ int shared_positive_numbers[number_of_threads];    
@@ -507,7 +539,8 @@ __global__ void sign(int * a, int * number_of_positive, int * number_of_negative
   }
 }
 ```
-```c
+
+```cpp
 int main(int argc, char * argv[]) {
   int n = 1024;
   int * cpu_number_of_positive = (int*)malloc(sizeof(int));
@@ -544,9 +577,10 @@ int main(int argc, char * argv[]) {
 # Homework
 
 ## A*x + B
+
 Write CUDA program which calculates following formula: `A*x + B`, where `A` and `B` are arrays and `x` is a number. Write code for validating results, comparing it with results done using sequential calculation on CPU. 
 
-```
+```cpp
 __global__ void calc(int *a, int *b, int *x, int *result, int *number_of_elements) {
   //int idx = threadIdx.x; // 1 block; maximum 1024 elements/threads are allowed
   int idx = blockIdx.x * blockDim.x + threadIdx.x; // n blocks; maximum 1024 elements/threads per block
@@ -610,7 +644,7 @@ int main(int argc, char * argv[]) {
 
 ## Find occurrences of value *k* in matrix *A*
 
-```
+```cpp
 __global__ void gpu_find_occurrences(int * a_gpu, int * n_gpu, int * k_gpu, int * occurrences_gpu) {
   __shared__ int occurrences_per_row[number_of_threads];
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -643,7 +677,8 @@ __global__ void gpu_find_occurrences(int * a_gpu, int * n_gpu, int * k_gpu, int 
   }
 }
 ```
-```
+
+```cpp
 int cpu_find_occurrences(int * a, int n, int k) {
   int occurrences = 0;
   for (int i = 0; i < n; i++) {
@@ -656,7 +691,8 @@ int cpu_find_occurrences(int * a, int n, int k) {
   return occurrences;
 }
 ```
-```
+
+```cpp
 int main() {
   const static int n = 16*1024;
   int *k = (int*)malloc(sizeof(int));
@@ -698,7 +734,7 @@ int main() {
 
 ### 1. `B[i] = (3*A[i] + 10* A[i+1] + 7*A[i+2]) / 20.f`
 
-```
+```cpp
 __global__ void gpu_calc(float * A, float * B, int * n) {
   int idx = threadIdx.x + blockIdx.x * blockDim.x;
   if (idx < *n) {
@@ -743,7 +779,7 @@ int main() {
   dim3 grid(n/number_of_threads + 1);
   //printf("block size: %d, %d, %d\n", block.x, block.y, block.z);
   //printf("grid size: %d, %d, %d\n", grid.x, grid.y, grid.z);
-  
+
   gpu_calc << < grid, block >> > (A_gpu, B_gpu, n_gpu);
   clock_t gpu_end = clock();
   printf("GPU time: %4.6f\n", (double)((double)(gpu_end - gpu_start) / CLOCKS_PER_SEC));
@@ -771,7 +807,7 @@ int main() {
 
 This solution uses shared memory and one block, so the limit is 1024 columns.
 
-```
+```cpp
 #define rows 2050
 #define cols 1024  //can only be 1024 matrices per block, because we use shared memory and one block- two blocks have two separate shared memories
 #define number_of_threads 1024
@@ -806,7 +842,7 @@ __global__ void gpu_calc(int * A, int * result_min, int * result_max) {
       printf("blockIdx.x=%d idx=%d %d %d %d \n", blockIdx.x, idx, A[idx + 0 * cols], A[idx + 1 * rows], A[idx + 2 * rows]);
     }
   }
-  
+
 }
 
 void cpu_calc(int * A, int *min_per_cols_cpu, int *max_per_cols_cpu) {
@@ -838,12 +874,12 @@ int main() {
     print_matrix(A, rows, cols); 
     printf("Ok.\n");
   };
-  
+
   int *min_per_cols_cpu = (int*)malloc(cols * sizeof(int));
   int *max_per_cols_cpu = (int*)malloc(cols * sizeof(int));
 
   cpu_calc(A, min_per_cols_cpu, max_per_cols_cpu);
-  
+
   int *A_gpu, *min_per_cols_gpu, *max_per_cols_gpu, *result_min_gpu, *result_max_gpu;
   cudaMalloc((void**)&A_gpu, rows * cols * sizeof(int));
   cudaMalloc((void**)&min_per_cols_gpu, cols * sizeof(int));
@@ -880,14 +916,14 @@ int main() {
 
   printf("end.");
   cudaDeviceReset();
-  
+
   return 0;
 }
 ```
 
 ### 6. Change each negative element of array A with the smallest positive number from that array.
 
-```
+```cpp
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 #include "cuda.h"
@@ -938,7 +974,8 @@ __global__ void gpu_calc(int *A, int *n) {
   }
 }
 ```
-```
+
+```cpp
 void cpu_calc(int *A, int n) {
   int min = INT_MAX;
   for (int i = 0; i < n; i++) {
@@ -954,7 +991,8 @@ void cpu_calc(int *A, int n) {
   }
 }
 ```
-```
+
+```cpp
 int main() {
   int *A, n, *result_gpu;
   printf("Enter array size: ");
