@@ -35,7 +35,9 @@ Gets the address of a location in memory
 ```c
 int MPI_Address(const void *input_location, MPI_Aint *output_address)
 ```
-> This is depricated function. To be able to use it, add `_CRT_SECURE_NO_WARNINGS` and `MSMPI_NO_DEPRECATE_20` to preprocessor definitions [in this way](https://stackoverflow.com/questions/16883037/remove-secure-warnings-crt-secure-no-warnings-from-projects-by-default-in-vis)
+
+> This is a depricated function. To be able to use it, add `_CRT_SECURE_NO_WARNINGS` and `MSMPI_NO_DEPRECATE_20` to preprocessor definitions [in this way](https://stackoverflow.com/questions/16883037/remove-secure-warnings-crt-secure-no-warnings-from-projects-by-default-in-vis)
+
 ### MPI_Send
 
 ```c
@@ -101,7 +103,6 @@ int MPI_Scatter(
 - `recvtype` data type of receive buffer elements
 - `root` rank of sending process (integer)
 
-
 ### MPI_Gather
 
 ![Tutorial](https://mpitutorial.com/tutorials/mpi-scatter-gather-and-allgather/gather.png)
@@ -137,12 +138,10 @@ int MPI_Type_struct(
       MPI_Datatype *newtype)
 ```
 
-
 - `count` number of blocks (integer) in datatype, also number of entries in arrays array_of_types, array_of_displacements and array_of_blocklengths 
 - `array_of_blocklengths` number of elements in each block (array). *i-ti* član ovog niza je broj elemenata tipa `array_of_types[i]` u i-tom bloku.
 - `array_of_displacements` byte displacement of each block (array). Niz pomeraja svakog bloka u odnosu na početnu adresu strukture, ali izražen u bajtovima. Dobija se uz pomoć funkcije `MPI_Address`
 - `array_of_types` type of elements in each block (array of handles to datatype objects) 
-
 
 Example:
 
@@ -177,19 +176,19 @@ int MPI_Type_vector(
 
 Example:
 
-```
+```c
 // There are two blocks, each made of 3 blocks of old data type
 count = 2, blocklen=3, stride=5, oldtype=MPI_Int;
 ```
 
-|1|||||2||||||
-|-|-|-|-|-|-|-|-|-|-|-|
-|x|x|x|_|_|x|x|x|_|_|_|
+| 1   |     |     |     |     | 2   |     |     |     |     |     |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| x   | x   | x   | _   | _   | x   | x   | x   | _   | _   | _   |
 
 Example: Send a column
 
-```
-count = n, blocklen=1, stride=n, MPI_Int;
+```c
+count = n, blocklen=1, stride = n, MPI_Int;
 
 [x] x x
 [x] x x
@@ -215,7 +214,7 @@ MPI_Type_indexed(
 
 Example:
 
-```
+```c
 count=3, 
 blocklens[0]=2
 blocklens[1]=1
@@ -225,10 +224,9 @@ displacements[1]=3
 displacements[2]=5
 ```
 
-|0|1|2|3|4|5|6|7|8|
-|-|-|-|-|-|-|-|-|-|
-|A|A|_|B|_|C|C|C|C|
-
+| 0   | 1   | 2   | 3   | 4   | 5   | 6   | 7   | 8   |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| A   | A   | _   | B   | _   | C   | C   | C   | C   |
 
 ## 1. Zadatak
 
@@ -246,6 +244,7 @@ Matrix in process 1:
 1       5       9       13
 0       0       0       0
 ```
+
 ```c
 #include "stdafx.h"
 #include "mpi.h"
@@ -361,26 +360,26 @@ void main(int argc, char *argv[]){
   MPI_Datatype gornji_t, donji_t;
   MPI_Init(&argc, &argv);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  
+
   // Za gornji trougao
   for (int i = 0; i<n; i++) {
     array_of_blocklens[i] = n - i;
     array_of_displacements[i] = (n + 1)*i;
   }
-  
+
   // count, *array_of_blocklens, *array_of_displacements, *old_data_type, *new_data_type
   MPI_Type_indexed(n, array_of_blocklens, array_of_displacements, MPI_INT, &gornji_t);
   MPI_Type_commit(&gornji_t); // Sada mozemo da koristimo gornji_t
-  
+
   // Za donji trougao
   for (int i = 0; i< n; i++) {
     array_of_blocklens[i] = i + 1;
     array_of_displacements[i] = n*i;
   }
-  
+
   MPI_Type_indexed(n, array_of_blocklens, array_of_displacements, MPI_INT, &donji_t);
   MPI_Type_commit(&donji_t);
-  
+
   if (rank == 0) {
     fill_array(&A[0][0], n*n, "i");
     // buf, count, MPI_Datatype, dest, tag, MPI_Comm
@@ -403,10 +402,9 @@ void main(int argc, char *argv[]){
 
 > Napisati MPI program koji cita jedan podatak tipa `int` i jedan podatak tipa `double` sa standardnog ulaza u procesu `0`, a nakon toga koriscenjem izvedenih tipova podataka salje oba podatka istovremeno svim procesima. 
 
-
-|||||||||||||||||
-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|
-|A|A|A|A|_|_|_|_|B|B|B|B|B|B|B|B|
+|     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| A   | A   | A   | A   | _   | _   | _   | _   | B   | B   | B   | B   | B   | B   | B   | B   |
 
 ```c
 using namespace std; 
@@ -417,7 +415,7 @@ void main(int argc, char *argv[]) {
   int blocklens[2];
   MPI_Aint dsp[2];
   MPI_Aint base_adr, adr1;
-  
+
   MPI_Init(&argc, &argv);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
@@ -430,7 +428,7 @@ void main(int argc, char *argv[]) {
   MPI_Address(&val.b, &adr1);
   dsp[0] = 0;
   dsp[1] = adr1 - base_adr;
-  
+
   // count, *array_of_blocklengths, *array_of_displacements, *array_of_types, *newtype
   MPI_Type_struct(2, blocklens, dsp, oldtypes, &struktura); // 2 because of int and double
   MPI_Type_commit(&struktura);
@@ -445,7 +443,6 @@ void main(int argc, char *argv[]) {
   printf("[%d]: After Bcast, val.a=%d val.b=%d\n\n", rank, val.a, val.b);
   MPI_Finalize();
 }
-
 ```
 
 Modification:
@@ -497,21 +494,21 @@ Primer izvedenog tipa podatka:
 MPI_Type_vector(3,2,4,MPI_INT,&izvtip);
 ```
 
-|1||||||||||||
-|-|-|-|-|-|-|-|-|-|-|-|-|
-|x|x|_|_|x|x|_|_|x|x|_|_|
+| 1   |     |     |     |     |     |     |     |     |     |     |     |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| x   | x   | _   | _   | x   | x   | _   | _   | x   | x   | _   | _   |
 
 Bez praznih mesta (bajtova):
 
-|1||||||||||2||||||||||3||||||||||
-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|
-|x|x|_|_|x|x|_|_|x|x|x|x|_|_|x|x|_|_|x|x|x|x|_|_|x|x|_|_|x|x|_|_|x|x|
+| 1   |     |     |     |     |     |     |     |     |     | 2   |     |     |     |     |     |     |     |     |     | 3   |     |     |     |     |     |     |     |     |     |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| x   | x   | _   | _   | x   | x   | _   | _   | x   | x   | x   | x   | _   | _   | x   | x   | _   | _   | x   | x   | x   | x   | _   | _   | x   | x   | _   | _   | x   | x   |
 
 Ako hocemo sa praznim:
 
-|1||||||||||||2||||||||||||3||||||||||||
-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|
-|x|x|_|_|x|x|_|_|x|x|_|_|x|x|_|_|x|x|_|_|x|x|_|_|x|x|_|_|x|x|_|_|x|x|_|_|
+| 1   |     |     |     |     |     |     |     |     |     |     |     | 2   |     |     |     |     |     |     |     |     |     |     |     | 3   |     |     |     |     |     |     |     |     |     |     |     |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| x   | x   | _   | _   | x   | x   | _   | _   | x   | x   | _   | _   | x   | x   | _   | _   | x   | x   | _   | _   | x   | x   | _   | _   | x   | x   | _   | _   | x   | x   | _   | _   | x   | x   | _   | _   |
 
 ```c
 MPI_Type_create_resized(MPI_Datatype it, 
@@ -535,12 +532,12 @@ MPI_Send(buff, 10 , izvtip, 1, 0, MPI_COMM_WORLD);
 
 ### Send a column to each process.
 
-|   |   |   |   |
-|---|---|---|---|
-|**a00**|a01|a02|a03|
-|**a10**|a11|a12|a13|
-|**a20**|a21|a22|a23|
-|**a30**|a31|a32|a33|
+|         |     |     |     |
+| ------- | --- | --- | --- |
+| **a00** | a01 | a02 | a03 |
+| **a10** | a11 | a12 | a13 |
+| **a20** | a21 | a22 | a23 |
+| **a30** | a31 | a32 | a33 |
 
 ```c
 MPI_Type_vector(n,1,n,MPI_INT,&kolona);
@@ -552,14 +549,14 @@ MPI_Scatter(&a[0][0], 1, kolona, ...);
 
 `n=6, p=3`
 
-|p0|p0|p1|p1|p2|p2|
-|---|---|---|---|---|---|
-|x|x|x|x|x|x|
-|x|x|x|x|x|x|
-|x|x|x|x|x|x|
-|x|x|x|x|x|x|
-|x|x|x|x|x|x|
-|x|x|x|x|x|x|
+| p0  | p0  | p1  | p1  | p2  | p2  |
+| --- | --- | --- | --- | --- | --- |
+| x   | x   | x   | x   | x   | x   |
+| x   | x   | x   | x   | x   | x   |
+| x   | x   | x   | x   | x   | x   |
+| x   | x   | x   | x   | x   | x   |
+| x   | x   | x   | x   | x   | x   |
+| x   | x   | x   | x   | x   | x   |
 
 ```c
 MPI_Type_vector(n, n/p, n, MPI_INT, &kolone)
@@ -596,37 +593,36 @@ local_C: 110 290 470 650 830 1010
 
 *P=2 dobija L=2 i L=5 vrstu* `2 mod 3 = 2; 5 mod 3 = 2` tj. `2, 2+3`
 
-
 *An\*n*
 
-|i|P|||||||
-|---|---|---|---|---|---|---|---|
-|0|**P0**|x|x|x|x|x|x|
-|1|P1|x|x|x|x|x|x|
-|2|*P2*|x|x|x|x|x|x|
-|3|**P0**|x|x|x|x|x|x|
-|4|P1|x|x|x|x|x|x|
-|5|*P2*|x|x|x|x|x|x|
+| i   | P      |     |     |     |     |     |     |
+| --- | ------ | --- | --- | --- | --- | --- | --- |
+| 0   | **P0** | x   | x   | x   | x   | x   | x   |
+| 1   | P1     | x   | x   | x   | x   | x   | x   |
+| 2   | *P2*   | x   | x   | x   | x   | x   | x   |
+| 3   | **P0** | x   | x   | x   | x   | x   | x   |
+| 4   | P1     | x   | x   | x   | x   | x   | x   |
+| 5   | *P2*   | x   | x   | x   | x   | x   | x   |
 
 `*`
 
-|vektor *Bn*|
-|---|
-|x|
-|x|
-|x|
-|x|
-|x|
+| vektor *Bn* |
+| ----------- |
+| x           |
+| x           |
+| x           |
+| x           |
+| x           |
 
 `=`
 
-|vektor *Cn*|
-|---|
-|x|
-|x|
-|x|
-|x|
-|x|
+| vektor *Cn* |
+| ----------- |
+| x           |
+| x           |
+| x           |
+| x           |
+| x           |
 
 ```c
 MPI_Type_vector(n/p, n, p*n, MPI_INT, &vrste)  // 1 new datatype has two whole rows
@@ -673,7 +669,7 @@ void main(int argc, char * argv[]) {
       */
     }
   }
-  
+
   // printf(">> rank=%d:\n\tlocal_A[0]=%d local_A[1]=%d\n\tlocal_A[n]=%d local_A[n+1]=%d\n\tlocal_C[0]=%d local_C[1]=%d\n", rank, local_A[0], local_A[1], local_A[n], local_A[n+1], local_C[0], local_C[1]);
 
   // Error! This way it would be 110 650 290 830 470 1010
@@ -688,7 +684,7 @@ void main(int argc, char * argv[]) {
 
   // MPI_Gather(send_buffer, send_count, send_type, recv_buffer, recv_count, recv_type, rank, comm)
   MPI_Gather(local_C, n/p, MPI_INT, C, 1, fixed_new_type, 0, MPI_COMM_WORLD);
-  
+
   if (rank == 0) {
     printf("local_C: ");
     print_array(&C[0], n);
@@ -754,25 +750,26 @@ rank=2
         [117 135 153]
 ^^^^^^^^^^^^^^^^
 ```
-|||
-|-|-|
-|p0|p1|
-|**a00**|a01|
-|**a10**|a11|
+
+|         |     |
+| ------- | --- |
+| p0      | p1  |
+| **a00** | a01 |
+| **a10** | a11 |
 
 `*`
 
-||||
-|-|-|-|
-|p0|**b00**|**b01**|
-|p1|b10|b11|
+|     |         |         |
+| --- | ------- | ------- |
+| p0  | **b00** | **b01** |
+| p1  | b10     | b11     |
 
 `=`
 
-|||
-|-|-|
-|c00|c01|
-|c10|c11|
+|     |     |
+| --- | --- |
+| c00 | c01 |
+| c10 | c11 |
 
 ```
 a00*b00 + a01*b10   a00*b01 + a01*b11
@@ -820,12 +817,12 @@ void main(int argc, char * argv[]) {
 ---
 
 ## MPI 3. nedelja
+
 ### Grupe i komunikatori
 
 [Tutorial](https://mpitutorial.com/tutorials/introduction-to-groups-and-communicators/)
 
-
-```
+```c
 MPI_Comm_group(
   MPI_Comm comm,
   MPI_Group* group)
@@ -835,7 +832,7 @@ Kao argument uzima komunikator i vraća odgovarajuću grupu procesa. Ova funkcij
 
 ---
 
-```
+```c
 MPI_Group_rank(
   MPI_Group group,
   int *rank)
@@ -845,7 +842,7 @@ Vraća identifikator procesa unutar grupe.
 
 ---
 
-```
+```c
 MPI_Group_size(
   MPI_Group group,
   int *size)
@@ -855,7 +852,7 @@ Vraća broj procesa unutar grupe.
 
 ---
 
-```
+```c
 MPI_Group_excl(
   MPI_Group group,
   int count, 
@@ -867,7 +864,7 @@ Vraća novu grupu tako što se iz stare grupe isključe procesi sa identifikator
 
 ---
 
-```
+```c
 MPI_Group_incl(
   MPI_Group old_group,
   int n,
@@ -883,7 +880,7 @@ Vraća novu grupu tako što procesi sa identifikatorima iz stare grupe koji su d
 
 ---
 
-```
+```c
 MPI_Group_intersection(
   MPI_Group group1,
   MPI_Group group2,
@@ -896,7 +893,7 @@ Vraća novu grupu koja se sastoji od procesa preseka grupa `group1` i `group2`, 
 
 ![union](https://mpitutorial.com/tutorials/introduction-to-groups-and-communicators/groups.png)
 
-```
+```c
 MPI_Group_union(
   MPI_Group group1,
   MPI_Group group2,
@@ -907,7 +904,7 @@ Vraća novu grupu koja se sastoji od procesa grupe `group1` na koju se nadovezuj
 
 ---
 
-```
+```c
 MPI_Group_difference(
   MPI_Group group1,
   MPI_Group group2,
@@ -918,7 +915,7 @@ Vraća novu grupu koja se sastoji od procesa grupe `group1` koji nisu `group2` u
 
 ---
 
-```
+```c
 MPI_Comm_create(
   MPI_Comm old_comm,
   MPI_Group group,
@@ -936,7 +933,7 @@ The key difference however (besides the lack of the tag argument), is that `MPI_
 
 ![communicators](https://mpitutorial.com/tutorials/introduction-to-groups-and-communicators/comm_split.png)
 
-```
+```c
 MPI_Comm_split(
   MPI_Comm old_comm,
   int color,
@@ -958,7 +955,7 @@ MPI has a limited number of objects that it can create at a time and not freeing
 
 ---
 
-```
+```c
 void main(int argc, char * argv[]) {
   MPI_Init(&argc, &argv);
 
@@ -990,7 +987,7 @@ void main(int argc, char * argv[]) {
 
 `#define p 7`
 
-```
+```c
 rank=0 rank_u_parnoj_grupi=0      rank_u_neparnoj_grupi=-32766
 rank=1 rank_u_parnoj_grupi=-32766 rank_u_neparnoj_grupi=0
 rank=2 rank_u_parnoj_grupi=1      rank_u_neparnoj_grupi=-32766
@@ -1028,7 +1025,7 @@ MPI_Finalize();
 
 Drugi način:
 
-```
+```c
 rank=0 key=7 new_rank=0 color=0 new_size=4
 rank=1 key=7 new_rank=0 color=1 new_size=3
 rank=2 key=7 new_rank=1 color=0 new_size=4
@@ -1038,7 +1035,7 @@ rank=5 key=7 new_rank=2 color=1 new_size=3
 rank=6 key=7 new_rank=3 color=0 new_size=4
 ```
 
-```
+```c
 int i, color, rank, new_rank, new_size, key;
 MPI_Comm new_comm;
 MPI_Init(&argc, &argv);
@@ -1056,7 +1053,7 @@ MPI_Finalize();
 
 `#define p 6` 
 
-```
+```c
 current_rank=0 row_id=0 col_id=0 rank_in_row=0 rank_in_col=0
 current_rank=1 row_id=0 col_id=1 rank_in_row=1 rank_in_col=0
 current_rank=2 row_id=1 col_id=0 rank_in_row=0 rank_in_col=1
@@ -1065,7 +1062,7 @@ current_rank=4 row_id=2 col_id=0 rank_in_row=0 rank_in_col=2
 current_rank=5 row_id=2 col_id=1 rank_in_row=1 rank_in_col=2
 ```
 
-```
+```c
 int row_id, col_id;
 int const COLUMNS = 2;
 MPI_Comm row_comm, col_comm;
@@ -1088,7 +1085,7 @@ MPI_Finalize();
 
 > Napisati MPI program koji realizuje množenje matrica A i B reda n, čime se dobija rezultujuća matrica C=A*B. Množenje se obavlja tako što master proces (sa identifikatorom 0) šalje svakom procesu radniku jednu kolonu matrice A i jednu vrstu matrice B. Master proces ne učestvuje u izračunavanju. Štampati dobijenu matricu.
 
-```
+```c
 #define p 4 // number of processes
 #define n 3 // !!! Matrix is n*n, not p*p, because one process doesn't calculate
 #define TAG 32
