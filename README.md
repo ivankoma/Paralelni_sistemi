@@ -19,6 +19,11 @@ Napravite GitHub nalog. Pogledajte neki [tutorial](https://www.youtube.com/watch
 
 ![watch_star](img/watch_star.png)
 
+|Semestar|Predmet|
+|---|---|
+|5|[Računarske mreže](https://github.com/ivankoma/Racunarske_mreze)|
+|8|[Paralelni sistemi](https://github.com/ivankoma/Paralelni_sistemi)|
+
 ---
 
 ![https://i.redd.it/expd3jkcgwd31.jpg](https://i.redd.it/expd3jkcgwd31.jpg)
